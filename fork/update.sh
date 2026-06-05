@@ -111,6 +111,21 @@ remove_upstream_github_dir() {
   git rm -r --ignore-unmatch .github >/dev/null 2>&1 || rm -rf .github
 }
 
+restore_github_workflow() {
+  if [ ! -d "fork/github" ]; then
+    echo -e "${YELLOW}fork/github/ not found; skipping workflow restore.${RESET}"
+    return
+  fi
+
+  echo ""
+  echo -e "${DIM}Restoring fork .github/workflows from fork/github/...${RESET}"
+  mkdir -p .github/workflows
+  cp fork/github/*.yml .github/workflows/ 2>/dev/null || true
+  cp fork/github/*.yaml .github/workflows/ 2>/dev/null || true
+  git add .github/ fork/github/
+  echo -e "  ${GREEN}✓${RESET} .github/workflows restored from fork/github/"
+}
+
 update_models_snapshot() {
   echo ""
   echo -e "${DIM}Refreshing models snapshot...${RESET}"
@@ -314,6 +329,7 @@ fi
 
 stage_fork_readme
 remove_upstream_github_dir
+restore_github_workflow
 restore_root_agents
 restore_git_hooks
 update_models_snapshot
