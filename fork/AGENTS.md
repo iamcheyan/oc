@@ -33,22 +33,31 @@ Scope: `fork/**` and fork maintenance work that affects repo-level sync, packagi
 
 - Validate shell scripts with `bash -n fork/build.sh` or `bash -n fork/update.sh` after edits.
 - Validate the fork package with:
+  - `bash fork/check-upstream-seams.sh`
   - `cd packages/opencode-vim && bun test`
   - `bash fork/build.sh`
 - The build emits:
   - `opencode-vim`
 
-## Upstream Export Dependencies
+## Upstream Seam Policy
 
-Our fork packages import a small number of symbols from upstream protected files. These exports may be removed by upstream during refactoring (e.g. `export` → module-internal). After each sync, verify they still exist.
+Upstream declined official TUI extension hooks. Fork keeps a **fixed allowlist** of upstream files:
 
-| Symbol | Upstream file | Fork consumer |
-|--------|--------------|---------------|
-| `context` | `packages/opencode/src/cli/cmd/tui/routes/session/index.tsx` | `packages/opencode-vim/src/upstream/session.ts` |
+- `fork/upstream-seams.allowlist`
+- `bash fork/check-upstream-seams.sh` (also in build, update, pre-commit, CI)
 
-`packages/opencode-vim/src/upstream/**` is the adapter boundary for upstream TUI internals. Do not import route internals such as `@tui/routes/session` directly from Vim UI components; add or update an adapter export instead. Keep fork-owned copies of keybinding command lists and small helper wrappers in the adapter when possible, instead of exporting more symbols from upstream route files.
+Do not add fork behavior under `packages/opencode/src/**` outside the allowlist.
 
-If any are missing after a merge, add `export` back to the upstream file. See `fork/docs/202605212058_upstream-sync-conflict-record.md` for full history.
+| File | Purpose |
+|------|---------|
+| `packages/opencode/src/cli/cmd/tui/app.tsx` | `OPENCODE_TUI_ROOT_COMPONENTS`, `OPENCODE_MINIMAL_*` env, update-check skip |
+| `packages/opencode/src/session/processor.ts` | permission reject clears `ctx.blocked` |
+
+Session context is **fork-owned**: `packages/opencode-vim/src/context/session-context.ts`. Do not re-export `context` from `session/index.tsx`.
+
+`packages/opencode-vim/src/upstream/**` is the adapter boundary for upstream TUI internals. Do not import `@tui/routes/session` from Vim UI components.
+
+See `fork/docs/202606052006_upstream-conflict-risk-map.md`.
 
 ## Docs
 

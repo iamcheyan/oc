@@ -243,7 +243,7 @@ export const layer = Layer.effect(
           },
         })
         if (error instanceof PermissionV1.RejectedError) {
-          // Fork: Rejecting a permission should not stop the session; allow user to continue interacting
+          // FORK-SEAM (opencode-vim): permission reject must not stop the session (upstream has no config hook)
           ctx.blocked = false
         } else if (error instanceof Question.RejectedError) {
           ctx.blocked = ctx.shouldBreak

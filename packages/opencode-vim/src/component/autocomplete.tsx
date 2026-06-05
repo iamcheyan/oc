@@ -11,7 +11,7 @@ import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { getScrollAcceleration } from "@tui/util/scroll"
 import { useTuiConfig } from "@tui/context/tui-config"
-import { useTheme, selectedForeground } from "@tui/context/theme"
+import { useForkTheme, selectedForeground } from "@/util/theme"
 import { useTerminalDimensions } from "@opentui/solid"
 import { Locale } from "@/util/locale"
 import type { PromptInfo } from "@tui/component/prompt/history"
@@ -88,7 +88,7 @@ export function Autocomplete(props: {
   const project = useProject()
   const slashes = useCommandSlashes()
   const modeStack = useOpencodeModeStack()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const dimensions = useTerminalDimensions()
   const frecency = useFrecency()
   const tuiConfig = useTuiConfig()

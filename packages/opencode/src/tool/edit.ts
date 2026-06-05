@@ -190,9 +190,6 @@ export const EditTool = Tool.define(
           })
 
           let output = "Edit applied successfully."
-          if (diff) {
-            output += "\n\n" + diff
-          }
           yield* lsp.touchFile(filePath, "document")
           const diagnostics = yield* lsp.diagnostics()
           const normalizedFilePath = FSUtil.normalizePath(filePath)

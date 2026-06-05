@@ -198,7 +198,6 @@ export function upsertTheme(name: string, theme: unknown) {
 }
 
 export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
-  const isMinimal = process.env.OPENCODE_MINIMAL === "1"
   const defs = theme.defs ?? {}
   function resolveColor(c: ColorValue, chain: string[] = []): RGBA {
     if (c instanceof RGBA) return c
@@ -227,9 +226,6 @@ export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
     Object.entries(theme.theme)
       .filter(([key]) => key !== "selectedListItemText" && key !== "backgroundMenu" && key !== "thinkingOpacity")
       .map(([key, value]) => {
-        if (isMinimal && key === "background") {
-          return [key, RGBA.fromInts(0, 0, 0, 0)]
-        }
         return [key, resolveColor(value as ColorValue)]
       }),
   ) as Partial<Record<ThemeColor, RGBA>>
@@ -241,13 +237,7 @@ export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
   } else {
     // Backward compatibility: if selectedListItemText is not defined, use background color
     // This preserves the current behavior for all existing themes
-    // FORK-SPECIFIC FIX: In minimal mode, resolved.background is forced to transparent (0, 0, 0, 0).
-    // To prevent selected items from becoming invisible, we resolve the actual theme background color instead.
-    if (isMinimal && theme.theme.background !== undefined) {
-      resolved.selectedListItemText = resolveColor(theme.theme.background as ColorValue)
-    } else {
-      resolved.selectedListItemText = resolved.background
-    }
+    resolved.selectedListItemText = resolved.background
   }
 
   // Handle backgroundMenu - optional with fallback to backgroundElement

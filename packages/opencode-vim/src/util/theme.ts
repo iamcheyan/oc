@@ -1,11 +1,31 @@
-import { RGBA } from "@opentui/core"
+import { createEffect } from "solid-js"
+import { useRenderer } from "@opentui/solid"
+import { useTheme as useUpstreamTheme } from "@tui/context/theme"
+import { isMinimalTuiEnabled } from "@/context/minimal"
+import { applyMinimalThemeOverrides } from "@/util/theme-minimal"
 
-/**
- * Get transparent color for minimal mode backgrounds
- * In minimal mode, ignores theme background colors and uses terminal's own colors
- */
-export function getMinimalBackground(_theme: unknown, _originalColor?: string | RGBA): RGBA | undefined {
-  // Always return undefined (transparent) in minimal mode
-  // This makes components use terminal's default background
-  return undefined
+type ResolvedTheme = ReturnType<typeof useUpstreamTheme>["theme"]
+
+export function useForkTheme() {
+  const ctx = useUpstreamTheme()
+  return {
+    ...ctx,
+    get theme() {
+      return applyMinimalThemeOverrides(ctx.theme)
+    },
+  }
 }
+
+export function MinimalRendererBackground() {
+  const renderer = useRenderer()
+  const { theme } = useForkTheme()
+
+  createEffect(() => {
+    if (!isMinimalTuiEnabled()) return
+    renderer.setBackgroundColor(theme.background)
+  })
+
+  return null
+}
+
+export { selectedForeground, tint } from "@tui/context/theme"

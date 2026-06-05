@@ -4,14 +4,14 @@ export function titlecase(str: string) {
 
 export function time(input: number): string {
   const date = new Date(input)
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true })
+  return date.toLocaleTimeString(undefined, { timeStyle: "short" })
 }
 
 export function datetime(input: number): string {
   const date = new Date(input)
   const localTime = time(input)
   const localDate = date.toLocaleDateString()
-  return `${localTime}  ${localDate}`
+  return `${localTime} · ${localDate}`
 }
 
 export function todayTimeOrDateTime(input: number): string {

@@ -371,6 +371,10 @@ if ! diff -q <(git show "$UPSTREAM_BRANCH:$UPSTREAM_PROMPT") "$FORK_PROMPT" >/de
 fi
 
 echo ""
+echo -e "${DIM}Checking upstream seam allowlist...${RESET}"
+bash fork/check-upstream-seams.sh
+
+echo ""
 echo -e "${DIM}Building fork CLI...${RESET}"
 bash fork/build.sh
 

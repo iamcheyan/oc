@@ -176,22 +176,12 @@ function completer(line: string): [string[], string] {
 
 async function chooseModel(sdk: OpencodeClient, requested?: string) {
   const providers = await sdk.config.providers(undefined, { throwOnError: true })
-  const cfg = await sdk.config.get(undefined, { throwOnError: true })
   if (requested) {
     const [providerID, ...rest] = requested.split("/")
     const modelID = rest.join("/")
     if (providerID && modelID) {
       const match = providers.data.providers.find((p) => p.id === providerID)
       if (match?.models[modelID]) return { providerID, modelID }
-    }
-  }
-  const fromConfig = cfg.data?.model
-  if (fromConfig) {
-    const [pid, ...rest] = fromConfig.split("/")
-    const mid = rest.join("/")
-    if (pid && mid) {
-      const match = providers.data.providers.find((p) => p.id === pid)
-      if (match?.models[mid]) return { providerID: pid, modelID: mid }
     }
   }
   for (const provider of providers.data.providers) {

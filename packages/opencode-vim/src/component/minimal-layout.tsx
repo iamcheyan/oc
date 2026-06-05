@@ -4,7 +4,7 @@ import { TuiPluginRuntime } from "@opencode/cli/cmd/tui/plugin/runtime"
 import { useDirectory } from "@tui/context/directory"
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
-import { selectedForeground, useTheme } from "@tui/context/theme"
+import { selectedForeground, useForkTheme } from "@/util/theme"
 import { SPINNER_FRAMES } from "@tui/component/spinner"
 import { TextAttributes, RGBA } from "@opentui/core"
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
@@ -23,7 +23,7 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
   const local = useLocal()
   const directory = useDirectory()
   const sync = useSync()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const vimMode = useVimMode()
   const thinking = useThinkingMode()
   const [spinnerFrame, setSpinnerFrame] = createSignal(0)

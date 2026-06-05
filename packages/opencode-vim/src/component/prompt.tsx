@@ -16,7 +16,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 import { Filesystem } from "@/util/filesystem"
 import { useLocal } from "@tui/context/local"
-import { tint, useTheme } from "@tui/context/theme"
+import { tint, useForkTheme } from "@/util/theme"
 import { EmptyBorder, SplitBorder } from "@tui/component/border"
 import { Spinner, SPINNER_FRAMES } from "@tui/component/spinner"
 import { useSDK } from "@tui/context/sdk"
@@ -41,6 +41,9 @@ import type { AssistantMessage, FilePart, UserMessage } from "@opencode-ai/sdk/v
 import { TuiEvent } from "@tui/event"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
+import { ConfigReference } from "@/config/reference"
+import { Reference } from "@/reference/reference"
+import { expandReferencePathMentions, mergeReferencePromptParts } from "@/session/reference-prompt-parts"
 import { formatDuration } from "@/util/format"
 import { createColors, createFrames } from "@tui/ui/spinner"
 import { useDialog } from "@tui/ui/dialog"
@@ -284,7 +287,7 @@ export function Prompt(props: PromptProps) {
   const paletteShortcut = useCommandShortcut("command.palette.show")
   const renderer = useRenderer()
   const dimensions = useTerminalDimensions()
-  const { theme, syntax } = useTheme()
+  const { theme, syntax } = useForkTheme()
   const animationsEnabled = createMemo(() => kv.get("animations_enabled", true))
   const list = createMemo(() => props.placeholders?.normal ?? [])
   const shell = createMemo(() => props.placeholders?.shell ?? [])
@@ -1323,7 +1326,16 @@ export function Prompt(props: PromptProps) {
     }
 
     // Filter out text parts (pasted content) since they're now expanded inline
-    const nonTextParts = store.prompt.parts.filter((part) => part.type !== "text")
+    let nonTextParts = store.prompt.parts.filter((part) => part.type !== "text")
+    const referenceParts = await expandReferencePathMentions({
+      text: inputText,
+      references: Reference.resolveAll({
+        references: ConfigReference.normalize(sync.data.config.reference ?? {}),
+        directory: sync.path.directory || process.cwd(),
+        worktree: sync.path.worktree || sync.path.directory || process.cwd(),
+      }),
+    })
+    nonTextParts = mergeReferencePromptParts(nonTextParts, referenceParts)
 
     // Capture mode before it gets reset
     const currentMode = store.mode

@@ -2,7 +2,7 @@ import { createSignal, createEffect, createMemo, type Accessor, Show, onMount, o
 import { useBindings, useOpencodeKeymap } from "@tui/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
 import { useKV } from "@tui/context/kv"
-import { useTheme } from "@tui/context/theme"
+import { useForkTheme } from "@/util/theme"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { TextAttributes, RGBA } from "@opentui/core"
 import type { MinimalPromptRef } from "@/component/prompt"
@@ -64,7 +64,7 @@ const WHITE_BOX_BORDER = {
 }
 
 export function DialogLazyGit(props: { dialog: any; error?: string }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
 
   onMount(() => {
     props.dialog.setSize("medium")
@@ -115,7 +115,7 @@ export function DialogLazyGit(props: { dialog: any; error?: string }) {
 }
 
 export function DialogBackupConfig(props: { dialog: any; directory: string }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 17)
   const defaultPath = `~/opencode-backup-${ts}.json`
   const [destPath, setDestPath] = createSignal(defaultPath)
@@ -262,7 +262,7 @@ export function DialogBackupConfig(props: { dialog: any; directory: string }) {
 }
 
 export function DialogRestoreConfig(props: { dialog: any; directory: string }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const [backupPath, setBackupPath] = createSignal("")
   const [status, setStatus] = createSignal<"input" | "success" | "error">("input")
   const [errorMsg, setErrorMsg] = createSignal("")
@@ -413,7 +413,7 @@ function resolveDir(dir: string): string {
 }
 
 export function DialogTestAPI(props: { dialog: any }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const dimensions = useTerminalDimensions()
   const [results, setResults] = createSignal<ProviderTestResult[]>([])
   const [providers, setProviders] = createSignal<ProviderTestEntry[]>([])

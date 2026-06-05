@@ -1,7 +1,7 @@
 import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
 import { createMemo, Show } from "solid-js"
-import { useTheme } from "@tui/context/theme"
+import { useForkTheme } from "@/util/theme"
 import { useTuiConfig } from "@tui/context/tui-config"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { TuiPluginRuntime } from "@opencode/cli/cmd/tui/plugin/runtime"
@@ -12,7 +12,7 @@ import { WorkspaceLabel } from "@tui/component/workspace-label"
 export function Sidebar(props: { sessionID: string; overlay?: boolean; compact?: boolean; bare?: boolean; hideFooter?: boolean }) {
   const project = useProject()
   const sync = useSync()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const tuiConfig = useTuiConfig()
   const session = createMemo(() => sync.session.get(props.sessionID))
   const workspace = () => {

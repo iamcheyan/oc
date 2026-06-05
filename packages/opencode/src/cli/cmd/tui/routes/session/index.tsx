@@ -159,7 +159,7 @@ const sessionGlobalBindingCommands = [
 
 const sessionGlobalUnfocusedBindingCommands = ["session.first", "session.last"] as const
 
-export const context = createContext<{
+const context = createContext<{
   width: number
   sessionID: string
   conceal: () => boolean

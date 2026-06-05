@@ -11,7 +11,7 @@ import { useEditorContext } from "@tui/context/editor"
 import { useDialog } from "@tui/ui/dialog"
 import { useBindings } from "@tui/keymap"
 import { useThinkingMode, nextThinkingMode } from "@tui/context/thinking"
-import { useTheme } from "@tui/context/theme"
+import { MinimalRendererBackground, useForkTheme } from "@/util/theme"
 import { useKV } from "@tui/context/kv"
 import { AutocompleteHostProvider } from "@/context/autocomplete-host"
 import { MinimalHomePromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
@@ -40,7 +40,7 @@ export function MinimalHome() {
   const vimMode = useVimMode()
   const { navigate } = useRoute()
   const kv = useKV()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const leaderMenu = createMemo(() => getLeaderMenu(directory()))
   const vimConfig = createMemo(() => loadVimConfig(directory()))
   const vimHidePrompt = createMemo(() => kv.get("minimal_vim_hide_prompt") ?? vimConfig().hidePrompt ?? false)
@@ -171,6 +171,7 @@ export function MinimalHome() {
 
   return (
     <AutocompleteHostProvider>
+      <MinimalRendererBackground />
       <box flexGrow={1} minHeight={0} flexDirection="column">
         <MinimalStatusBar />
         <box flexGrow={1} minHeight={0} flexDirection="column" justifyContent="center" alignItems="center">

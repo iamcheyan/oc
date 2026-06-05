@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Git pre-commit hook to prevent API key leaks
 
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+if [ -f "$ROOT_DIR/fork/check-upstream-seams.sh" ]; then
+  bash "$ROOT_DIR/fork/check-upstream-seams.sh" || exit 1
+fi
+
 # Retrieve only the added/modified lines in staged files
 # To avoid false positives on deletions or metadata, we search lines starting with "+" in the staged diff.
 STAGED_DIFF=$(git diff --cached --unified=0 | grep "^+[^+]" || true)

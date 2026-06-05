@@ -23,14 +23,6 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
 
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
       const providers = yield* providerSvc.list()
-      const cfg = yield* configSvc.get()
-      if (cfg.model) {
-        const parsed = Provider.parseModel(cfg.model)
-        return {
-          providers: Object.values(providers).map(Provider.toPublicInfo),
-          default: { [parsed.providerID]: parsed.modelID },
-        }
-      }
       return {
         providers: Object.values(providers).map(Provider.toPublicInfo),
         default: Provider.defaultModelIDs(providers),

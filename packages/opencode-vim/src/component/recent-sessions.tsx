@@ -1,7 +1,7 @@
 import { createEffect, createMemo, For, Show } from "solid-js"
 import { useSync } from "@tui/context/sync"
 import { useRoute } from "@tui/context/route"
-import { useTheme, selectedForeground } from "@tui/context/theme"
+import { useForkTheme, selectedForeground } from "@/util/theme"
 import { Locale } from "@/util/locale"
 
 type SessionSummary = {
@@ -19,7 +19,7 @@ export function RecentSessions(props: {
 }) {
   const sync = useSync()
   const route = useRoute()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
 
   const list = createMemo(() => {
     if (!props.visible) return [] as SessionSummary[]

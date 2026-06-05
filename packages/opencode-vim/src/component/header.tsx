@@ -3,7 +3,7 @@ import { useDirectory } from "@tui/context/directory"
 import { useLocal } from "@tui/context/local"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
-import { useTheme } from "@tui/context/theme"
+import { useForkTheme } from "@/util/theme"
 
 function activeModelLabel() {
   const local = useLocal()
@@ -18,7 +18,7 @@ export function MinimalHeader(props: { showSession?: boolean }) {
   const directory = useDirectory()
   const route = useRoute()
   const sync = useSync()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const model = activeModelLabel()
   const sessionLabel = () => {
     if (route.data.type !== "session") return "new"

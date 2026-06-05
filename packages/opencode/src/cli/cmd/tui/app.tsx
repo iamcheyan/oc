@@ -80,6 +80,7 @@ import {
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
+// FORK-SEAM (opencode-vim): upstream declined official root-route hooks; keep this global thin.
 declare global {
   var OPENCODE_TUI_ROOT_COMPONENTS:
     | {
@@ -139,6 +140,7 @@ const appBindingCommands = [
 
 export function tuiRendererConfig(_config: TuiConfig.Resolved): CliRendererConfig {
   const mouseEnabled = !Flag.OPENCODE_DISABLE_MOUSE && (_config.mouse ?? true)
+  // FORK-SEAM (opencode-vim): minimal renderer env is set in packages/opencode-vim/src/runtime.ts
   const isMinimal = process.env.OPENCODE_MINIMAL === "1"
   const minimalScreenMode = isMinimal
     ? (process.env.OPENCODE_MINIMAL_SCREEN_MODE as "split-footer" | "main-screen" | undefined)
@@ -1034,7 +1036,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
   event.on("installation.update-available", async (evt) => {
     console.log("installation.update-available", evt)
-    // Minimal mode: skip update checks (fork-owned behavior)
+    // FORK-SEAM (opencode-vim): skip update prompts in minimal mode
     if (process.env.OPENCODE_MINIMAL_DISABLE_UPDATE_CHECK === "1") return
 
     const version = evt.properties.version
@@ -1115,12 +1117,14 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           <Switch>
             <Match when={route.data.type === "home"}>
               {(() => {
+                // FORK-SEAM (opencode-vim): optional Home override via installMinimalRootComponents()
                 const View = globalThis.OPENCODE_TUI_ROOT_COMPONENTS?.Home ?? Home
                 return <View />
               })()}
             </Match>
             <Match when={route.data.type === "session"}>
               {(() => {
+                // FORK-SEAM (opencode-vim): optional Session override via installMinimalRootComponents()
                 const View = globalThis.OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? Session
                 return <View />
               })()}

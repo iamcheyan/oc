@@ -1,6 +1,6 @@
 import { TextAttributes } from "@opentui/core"
 import { Switch, Match, Show, createMemo, For } from "solid-js"
-import { useTheme } from "@tui/context/theme"
+import { useForkTheme } from "@/util/theme"
 import { useSession } from "@/upstream/session"
 import { usePathFormatter } from "@tui/context/path-format"
 import { useSync } from "@tui/context/sync"
@@ -94,7 +94,7 @@ function ToolBlock(props: { children: any }) {
 }
 
 function ToolHeader(props: { icon: string; label: string; value?: string }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   return (
     <box flexDirection="row" gap={1}>
       <text attributes={TextAttributes.BOLD} fg={theme.text}>
@@ -110,7 +110,7 @@ function ToolHeader(props: { icon: string; label: string; value?: string }) {
 }
 
 function DetailLine(props: { children: any; tone?: "muted" | "primary" | "error" }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const fg = () => {
     if (props.tone === "primary") return theme.primary
     if (props.tone === "error") return theme.error
@@ -120,7 +120,7 @@ function DetailLine(props: { children: any; tone?: "muted" | "primary" | "error"
 }
 
 function OutputPreview(props: { text: string; maxLines?: number }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const lines = createMemo(() => compactLines(props.text, props.maxLines ?? 8))
   return (
     <box flexDirection="column">
@@ -134,7 +134,7 @@ function OutputPreview(props: { text: string; maxLines?: number }) {
 
 // Component to display parsed read output
 function ParsedReadOutput(props: { output: string; maxEntries?: number }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const parsed = createMemo(() => parseToolOutput(props.output))
   const entries = createMemo(() => {
     const all = parsed().entries ?? []
@@ -178,7 +178,7 @@ function ParsedReadOutput(props: { output: string; maxEntries?: number }) {
 
 // Diagnostics display for write/edit with errors
 function Diagnostics(props: { diagnostics: any[]; filePath: string }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   return (
     <For each={props.diagnostics}>
       {(diag) => (
@@ -192,7 +192,7 @@ function Diagnostics(props: { diagnostics: any[]; filePath: string }) {
 
 // Todo item display
 function TodoItem(props: { status: string; content: string }) {
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const icon = () => {
     if (props.status === "completed") return "✓"
     if (props.status === "in_progress") return "◐"
@@ -226,7 +226,7 @@ interface SimpleToolProps {
 }
 
 export function SimpleTool(props: SimpleToolProps) {
-  const { theme, syntax } = useTheme()
+  const { theme, syntax } = useForkTheme()
   const ctx = useSession()
   const pathFormatter = usePathFormatter()
   const sync = useSync()

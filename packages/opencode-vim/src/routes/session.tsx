@@ -14,7 +14,7 @@ import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { useDirectory } from "@tui/context/directory"
 import { useRoute, useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
-import { selectedForeground, useTheme } from "@tui/context/theme"
+import { MinimalRendererBackground, selectedForeground, useForkTheme } from "@/util/theme"
 import { useProject } from "@tui/context/project"
 import { useDialog } from "@tui/ui/dialog"
 import { useTuiConfig } from "@tui/context/tui-config"
@@ -239,7 +239,7 @@ function CompactUserMessage(props: {
 
 
 function CompactTextPart(props: { part: Part & { type: "text" } }) {
-  const { theme, syntax } = useTheme()
+  const { theme, syntax } = useForkTheme()
   const content = createMemo(() => props.part.text?.trim() ?? "")
   return (
     <Show when={content()}>
@@ -258,7 +258,7 @@ function CompactTextPart(props: { part: Part & { type: "text" } }) {
 
 function CompactReasoningPart(props: { part: Part & { type: "reasoning" } }) {
   const ctx = useSession()
-  const { theme, syntax } = useTheme()
+  const { theme, syntax } = useForkTheme()
   const content = createMemo(() => props.part.text.replace("[REDACTED]", "").trim())
   const showThinking = createMemo(() => ctx.thinkingMode() === "show")
   return (
@@ -283,7 +283,7 @@ function CompactAssistantMessage(props: {
 }) {
   const ctx = useSession()
   const local = useLocal()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
 
@@ -357,7 +357,7 @@ export function MinimalSession() {
   const project = useProject()
   const tuiConfig = useTuiConfig()
   const kv = useKV()
-  const { theme } = useTheme()
+  const { theme } = useForkTheme()
   const promptRef = usePromptRef()
   const dialog = useDialog()
   const renderer = useRenderer()
@@ -676,6 +676,7 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
 
   return (
     <AutocompleteHostProvider>
+      <MinimalRendererBackground />
       <PathFormatterProvider path={session()?.directory}>
         <SessionContext.Provider value={contextValue}>
           <box flexDirection="column" flexGrow={1} minHeight={0} position="relative">

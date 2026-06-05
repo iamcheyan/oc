@@ -38,6 +38,15 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check upstream seam allowlist
+        run: bash fork/check-upstream-seams.sh
+
+      - name: Test opencode-vim package
+        run: |
+          cd packages/opencode-vim
+          bun typecheck
+          bun test
+
       - name: Build
         env:
           PLATFORM_OS: ${{ matrix.platform_os }}

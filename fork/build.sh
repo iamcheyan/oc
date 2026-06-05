@@ -223,6 +223,9 @@ main() {
   load_bun
   detect_platform
 
+  echo -e "${DIM}Checking upstream seam allowlist...${RESET}"
+  bash "$SCRIPT_DIR/check-upstream-seams.sh"
+
   # Install dependencies (skip prepare scripts - husky not needed for build)
   echo -e "${DIM}Installing dependencies from root...${RESET}"
   cd "$ROOT_DIR"
