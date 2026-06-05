@@ -216,9 +216,9 @@ jobs:
 
       - name: Package release assets
         run: |
-          cd artifacts
-          for dir in opencode-*; do
-            tar -czf "../${dir}.tar.gz" -C "$dir/bin" .
+          for dir in artifacts/opencode-*; do
+            name="$(basename "$dir")"
+            tar -czf "${name}.tar.gz" -C "$dir/dist/${name}/bin" .
           done
 
       - name: Create release
