@@ -214,11 +214,15 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug artifact structure
+        run: find artifacts -type f | head -20
+
       - name: Package release assets
         run: |
           for dir in artifacts/opencode-*; do
             name="$(basename "$dir")"
-            tar -czf "${name}.tar.gz" -C "$dir/dist/${name}/bin" .
+            bin_dir="$(find "$dir" -type d -name bin | head -1)"
+            tar -czf "${name}.tar.gz" -C "$bin_dir" .
           done
 
       - name: Create release
