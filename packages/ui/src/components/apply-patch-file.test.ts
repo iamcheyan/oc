@@ -10,7 +10,7 @@ describe("apply patch file", () => {
         relativePath: "a.ts",
         type: "update",
         patch:
-          "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n+three\n",
+          "Index: a.ts\n\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n+three\n",
         additions: 1,
         deletions: 1,
       },

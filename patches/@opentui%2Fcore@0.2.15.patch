@@ -1,0 +1,77 @@
+diff --git a/index-3fq5hq97.js b/index-3fq5hq97.js
+--- a/index-3fq5hq97.js
++++ b/index-3fq5hq97.js
+@@ -11386,8 +11386,51 @@
+       this.lib.bufferDrawText(this.bufferPtr, afterText, x + end, y, fg2, bg2, attributes);
+     }
+   }
+-  fillRect(x, y, width, height, bg2) {
+-    this.lib.bufferFillRect(this.bufferPtr, x, y, width, height, bg2);
++  fillRect(fillX, fillY, fillWidth, fillHeight, color) {
++    this.guard();
++    const [cr, cg, cb, ca] = color.toInts();
++    if (ca === 0) return;
++    if (ca === 255) {
++      this.lib.bufferFillRect(this.bufferPtr, fillX, fillY, fillWidth, fillHeight, color);
++      return;
++    }
++    const buffers = this.buffers;
++    const chars = buffers.char;
++    const fg2 = buffers.fg;
++    const bg2 = buffers.bg;
++    const bufferWidth = this.width;
++    const bufferHeight = this.height;
++    const alpha = ca / 255;
++    const invAlpha = 1 - alpha;
++    for (let dy = 0; dy < fillHeight; dy++) {
++      const y = fillY + dy;
++      if (y < 0 || y >= bufferHeight) continue;
++      for (let dx = 0; dx < fillWidth; dx++) {
++        const x = fillX + dx;
++        if (x < 0 || x >= bufferWidth) continue;
++        const cellIndex = y * bufferWidth + x;
++        const colorIndex = cellIndex * 4;
++        const bgA = bg2[colorIndex + 3];
++        if (bgA === 0) {
++          bg2[colorIndex] = cr;
++          bg2[colorIndex + 1] = cg;
++          bg2[colorIndex + 2] = cb;
++          bg2[colorIndex + 3] = ca;
++        } else {
++          bg2[colorIndex] = Math.round(bg2[colorIndex] * invAlpha + cr * alpha);
++          bg2[colorIndex + 1] = Math.round(bg2[colorIndex + 1] * invAlpha + cg * alpha);
++          bg2[colorIndex + 2] = Math.round(bg2[colorIndex + 2] * invAlpha + cb * alpha);
++          bg2[colorIndex + 3] = 255;
++        }
++        fg2[colorIndex] = Math.round(fg2[colorIndex] * invAlpha + cr * alpha);
++        fg2[colorIndex + 1] = Math.round(fg2[colorIndex + 1] * invAlpha + cg * alpha);
++        fg2[colorIndex + 2] = Math.round(fg2[colorIndex + 2] * invAlpha + cb * alpha);
++        fg2[colorIndex + 3] = 255;
++        if (chars[cellIndex] === 0) {
++          chars[cellIndex] = 32;
++        }
++      }
++    }
+   }
+   colorMatrix(matrix, cellMask, strength = 1, target = 3 /* Both */) {
+     this.guard();
+@@ -11451,8 +11494,17 @@
+     this.guard();
+     const style = parseBorderStyle(options.borderStyle, "single");
+     const borderChars = options.customBorderChars ?? BorderCharArrays[style];
+-    const packedOptions = packDrawOptions(options.border, options.shouldFill ?? false, options.titleAlignment || "left", options.bottomTitleAlignment || "left");
+-    this.lib.bufferDrawBox(this.bufferPtr, options.x, options.y, options.width, options.height, borderChars, packedOptions, options.borderColor, options.backgroundColor, options.title ?? null, options.bottomTitle ?? null);
++    const shouldFill = options.shouldFill ?? false;
++    const bg2 = options.backgroundColor;
++    const isSemiTransparent = bg2 && bg2.a > 0 && bg2.a < 255;
++    if (shouldFill && isSemiTransparent) {
++      this.fillRect(options.x, options.y, options.width, options.height, bg2);
++      const packedOptions = packDrawOptions(options.border, false, options.titleAlignment || "left", options.bottomTitleAlignment || "left");
++      this.lib.bufferDrawBox(this.bufferPtr, options.x, options.y, options.width, options.height, borderChars, packedOptions, options.borderColor, bg2, options.title ?? null, options.bottomTitle ?? null);
++    } else {
++      const packedOptions = packDrawOptions(options.border, shouldFill, options.titleAlignment || "left", options.bottomTitleAlignment || "left");
++      this.lib.bufferDrawBox(this.bufferPtr, options.x, options.y, options.width, options.height, borderChars, packedOptions, options.borderColor, bg2, options.title ?? null, options.bottomTitle ?? null);
++    }
+   }
+   pushScissorRect(x, y, width, height) {
+     this.guard();

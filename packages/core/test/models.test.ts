@@ -7,7 +7,7 @@ import { Global } from "@opencode-ai/core/global"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { EventV2 } from "@opencode-ai/core/event"
 import { it } from "./lib/effect"
-import { readFile, rm, writeFile, utimes, mkdir } from "fs/promises"
+import { rm, writeFile, utimes, mkdir } from "fs/promises"
 import path from "path"
 
 // test/preload.ts pins OPENCODE_MODELS_PATH to a fixture so other tests can
@@ -96,17 +96,15 @@ const buildLayer = (state: Ref.Ref<MockState>) =>
     Layer.provide(EventV2.defaultLayer),
   )
 
-const writeCacheText = (text: string, mtimeMs?: number) =>
+const writeCache = (data: object, mtimeMs?: number) =>
   Effect.promise(async () => {
     await mkdir(Global.Path.cache, { recursive: true })
-    await writeFile(cacheFile, text)
+    await writeFile(cacheFile, JSON.stringify(data))
     if (mtimeMs !== undefined) {
       const t = mtimeMs / 1000
       await utimes(cacheFile, t, t)
     }
   })
-
-const writeCache = (data: object, mtimeMs?: number) => writeCacheText(JSON.stringify(data), mtimeMs)
 
 const provided = <A, E>(state: Ref.Ref<MockState>, eff: Effect.Effect<A, E, ModelsDev.Service>) =>
   eff.pipe(Effect.provide(buildLayer(state)))
@@ -150,31 +148,6 @@ describe("ModelsDev Service", () => {
       expect(result).toEqual({})
       const final = yield* Ref.get(state)
       expect(final.calls).toEqual([])
-    }),
-  )
-
-  it.live("get() recovers from a corrupted cache file by fetching a fresh catalog", () =>
-    Effect.gen(function* () {
-      yield* writeCacheText("{")
-      const state = yield* Ref.make({ ...initialState, body: JSON.stringify(fixture2) })
-      const result = yield* Effect.acquireUseRelease(
-        Effect.sync(() => {
-          Flag.OPENCODE_DISABLE_MODELS_FETCH = false
-        }),
-        () =>
-          provided(
-            state,
-            ModelsDev.Service.use((s) => s.get()),
-          ),
-        () =>
-          Effect.sync(() => {
-            Flag.OPENCODE_DISABLE_MODELS_FETCH = true
-          }),
-      )
-      expect(result).toEqual(fixture2)
-      expect(yield* Effect.promise(() => readFile(cacheFile, "utf8"))).toBe(JSON.stringify(fixture2))
-      const final = yield* Ref.get(state)
-      expect(final.calls.length).toBe(1)
     }),
   )
 

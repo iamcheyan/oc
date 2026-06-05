@@ -6,7 +6,7 @@ describe("session diff", () => {
     const diff = {
       file: "a.ts",
       patch:
-        "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n+three\n",
+        "Index: a.ts\n\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n+three\n",
       additions: 1,
       deletions: 1,
       status: "modified" as const,
@@ -23,7 +23,7 @@ describe("session diff", () => {
     const diff = {
       file: "a.ts",
       patch:
-        "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n\\ No newline at end of file\n+three\n\\ No newline at end of file\n",
+        "Index: a.ts\n\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n\\ No newline at end of file\n+three\n\\ No newline at end of file\n",
       additions: 1,
       deletions: 1,
       status: "modified" as const,

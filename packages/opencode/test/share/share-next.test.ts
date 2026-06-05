@@ -281,7 +281,7 @@ describe("ShareNext", () => {
               {
                 file: "a.ts",
                 patch:
-                  "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,1 +1,1 @@\n-one\n\\ No newline at end of file\n+two\n\\ No newline at end of file\n",
+                  "Index: a.ts\n\n--- a.ts\t\n+++ a.ts\t\n@@ -1,1 +1,1 @@\n-one\n\\ No newline at end of file\n+two\n\\ No newline at end of file\n",
                 additions: 1,
                 deletions: 1,
                 status: "modified",

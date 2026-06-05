@@ -80,6 +80,16 @@ import {
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
+// FORK-SEAM (opencode-vim): upstream declined official root-route hooks; keep this global thin.
+declare global {
+  var OPENCODE_TUI_ROOT_COMPONENTS:
+    | {
+        Home?: typeof Home
+        Session?: typeof Session
+      }
+    | undefined
+}
+
 const appGlobalBindingCommands = [
   "session.list",
   "session.new",
@@ -130,9 +140,20 @@ const appBindingCommands = [
 
 export function tuiRendererConfig(_config: TuiConfig.Resolved): CliRendererConfig {
   const mouseEnabled = !Flag.OPENCODE_DISABLE_MOUSE && (_config.mouse ?? true)
+  // FORK-SEAM (opencode-vim): minimal renderer env is set in packages/opencode-vim/src/runtime.ts
+  const isMinimal = process.env.OPENCODE_MINIMAL === "1"
+  const minimalScreenMode = isMinimal
+    ? (process.env.OPENCODE_MINIMAL_SCREEN_MODE as "split-footer" | "main-screen" | undefined)
+    : undefined
+  const minimalFooterHeight =
+    isMinimal && minimalScreenMode === "split-footer"
+      ? Number(process.env.OPENCODE_MINIMAL_FOOTER_HEIGHT) || undefined
+      : undefined
 
   return {
-    externalOutputMode: "passthrough",
+    screenMode: minimalScreenMode,
+    footerHeight: minimalFooterHeight,
+    externalOutputMode: minimalScreenMode === "split-footer" ? "capture-stdout" : "passthrough",
     targetFps: 60,
     gatherStats: false,
     exitOnCtrlC: false,
@@ -1015,6 +1036,9 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
   event.on("installation.update-available", async (evt) => {
     console.log("installation.update-available", evt)
+    // FORK-SEAM (opencode-vim): skip update prompts in minimal mode
+    if (process.env.OPENCODE_MINIMAL_DISABLE_UPDATE_CHECK === "1") return
+
     const version = evt.properties.version
 
     const skipped = kv.get("skipped_version")
@@ -1092,12 +1116,18 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         <box flexGrow={1} minHeight={0} flexDirection="column">
           <Switch>
             <Match when={route.data.type === "home"}>
-              <Home />
+              {(() => {
+                // FORK-SEAM (opencode-vim): optional Home override via installMinimalRootComponents()
+                const View = globalThis.OPENCODE_TUI_ROOT_COMPONENTS?.Home ?? Home
+                return <View />
+              })()}
             </Match>
             <Match when={route.data.type === "session"}>
-              <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
-                {(_) => <Session />}
-              </Show>
+              {(() => {
+                // FORK-SEAM (opencode-vim): optional Session override via installMinimalRootComponents()
+                const View = globalThis.OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? Session
+                return <View />
+              })()}
             </Match>
           </Switch>
           {plugin()}

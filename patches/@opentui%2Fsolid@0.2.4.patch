@@ -1,0 +1,18 @@
+diff --git a/jsx-runtime.d.ts b/jsx-runtime.d.ts
+--- a/jsx-runtime.d.ts
++++ b/jsx-runtime.d.ts
+@@ -49,3 +49,14 @@
+     children: {}
+   }
+ }
++
++declare function Fragment(props: {
++  children: JSX.Element
++}): JSX.Element
++
++declare function jsx(
++  type: unknown,
++  props: Record<string, unknown>,
++): JSX.Element
++
++export { Fragment, jsx, jsx as jsxs, jsx as jsxDEV }
