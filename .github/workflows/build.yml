@@ -3,7 +3,11 @@ name: Build
 on:
   push:
     branches: ["*"]
+    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -197,3 +201,34 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Package release assets
+        run: |
+          cd artifacts
+          for dir in opencode-*; do
+            tar -czf "../${dir}.tar.gz" -C "$dir/bin" .
+          done
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes \
+            opencode-darwin-arm64.tar.gz \
+            opencode-linux-x64.tar.gz
