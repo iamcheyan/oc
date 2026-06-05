@@ -120,9 +120,10 @@ jobs:
 
           # Build function — must run from $PKG_DIR (matches build.sh subshell behavior)
           build_bin() {
-            local entrypoint="$1"
-            local outfile="$2"
-            local minify="${3:-true}"
+            local package_dir="$1"
+            local entrypoint="$2"
+            local outfile="$3"
+            local minify="${4:-true}"
 
             echo "::group::Building $outfile"
 
@@ -134,7 +135,7 @@ jobs:
             BUILD_LIBC="$LIBC" \
             BUILD_MIGRATIONS="$MIGRATIONS_JSON" \
             BUILD_ENTRYPOINT="$entrypoint" \
-            BUILD_TSCONFIG="$PKG_DIR/tsconfig.json" \
+            BUILD_TSCONFIG="$package_dir/tsconfig.json" \
             BUILD_EXTRA_ENTRYPOINTS="$VIM_EXTRA" \
             BUILD_TREE_SITTER_WORKER_PATH="$VIM_TREE_SITTER_WORKER_PATH" \
             BUILD_OPENCODE_WORKER_PATH="$WORKER_PATH" \
@@ -187,8 +188,8 @@ jobs:
           }
 
           # Build both binaries (absolute paths, matching build.sh)
-          build_bin "$PKG_DIR/src/index.ts" "$OUT_DIR/bin/opencode"
-          build_bin "$VIM_DIR/src/index.ts" "$OUT_DIR/bin/opencode-vim" "false"
+          build_bin "$PKG_DIR" "$PKG_DIR/src/index.ts" "$OUT_DIR/bin/opencode"
+          build_bin "$VIM_DIR" "$VIM_DIR/src/index.ts" "$OUT_DIR/bin/opencode-vim" "false"
 
           # Smoke test
           echo "::group::Smoke tests"
