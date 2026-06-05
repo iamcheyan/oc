@@ -1,0 +1,199 @@
+name: Build
+
+on:
+  push:
+    branches: ["*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform_os: darwin
+            platform_arch: arm64
+            artifact_name: opencode-darwin-arm64
+          - os: ubuntu-latest
+            platform_os: linux
+            platform_arch: x64
+            artifact_name: opencode-linux-x64
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        env:
+          PLATFORM_OS: ${{ matrix.platform_os }}
+          PLATFORM_ARCH: ${{ matrix.platform_arch }}
+        run: |
+          set -euo pipefail
+
+          ROOT_DIR="$(pwd)"
+          PKG_DIR="$ROOT_DIR/packages/opencode"
+          VIM_DIR="$ROOT_DIR/packages/opencode-vim"
+          WEB_UI_STUB="$PKG_DIR/opencode-web-ui.gen.ts"
+
+          trap "rm -f '$WEB_UI_STUB'" EXIT
+
+          # Collect migrations
+          MIGRATIONS_JSON=$(python3 -c "
+          import json, os, re, datetime
+          migration_dir = os.path.join('$PKG_DIR', 'migration')
+          migrations = []
+          if os.path.isdir(migration_dir):
+              for name in sorted(os.listdir(migration_dir)):
+                  sql_file = os.path.join(migration_dir, name, 'migration.sql')
+                  if not os.path.isfile(sql_file):
+                      continue
+                  with open(sql_file, 'r') as f:
+                      sql = f.read()
+                  ts = 0
+                  m = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})', name)
+                  if m:
+                      try:
+                          dt = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                                                 int(m.group(4)), int(m.group(5)), int(m.group(6)))
+                          ts = int(dt.timestamp() * 1000)
+                      except:
+                          pass
+                  migrations.append({'sql': sql, 'timestamp': ts, 'name': name})
+          print(json.dumps(migrations))
+          ")
+
+          # Version
+          VERSION="$(git describe --tags --always 2>/dev/null || echo '0.0.0-dev')"
+          VERSION="${VERSION#v}"
+          CHANNEL="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'ci')"
+
+          # Libc detection
+          LIBC="glibc"
+          if [ "$PLATFORM_OS" = "linux" ]; then
+            if ldd --version 2>&1 | grep -qi musl; then
+              LIBC="musl"
+            fi
+          fi
+
+          # Find parser worker
+          LOCAL_PARSER="$PKG_DIR/node_modules/@opentui/core/parser.worker.js"
+          ROOT_PARSER="$ROOT_DIR/node_modules/@opentui/core/parser.worker.js"
+          if [ -f "$LOCAL_PARSER" ]; then
+            PARSER_WORKER="$(realpath "$LOCAL_PARSER")"
+          elif [ -f "$ROOT_PARSER" ]; then
+            PARSER_WORKER="$(realpath "$ROOT_PARSER")"
+          else
+            echo "::error::parser.worker.js not found"
+            exit 1
+          fi
+
+          WORKER_PATH="./src/cli/cmd/tui/worker.ts"
+          WORKER_RELATIVE="$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]).replace(chr(92), "/"))' "$PARSER_WORKER" "$PKG_DIR")"
+          BUNFS_ROOT="/\$bunfs/root/"
+          VIM_EXTRA="$(printf '%s\n%s' "$PARSER_WORKER" "$WORKER_PATH")"
+          VIM_TREE_SITTER_WORKER_PATH="${BUNFS_ROOT}${WORKER_RELATIVE}"
+
+          # Web UI stub
+          echo 'export default null' > "$WEB_UI_STUB"
+
+          BUILD_TARGET="bun-${PLATFORM_OS}-${PLATFORM_ARCH}"
+
+          # Output directory
+          OUT_DIR="$ROOT_DIR/dist/opencode-${PLATFORM_OS}-${PLATFORM_ARCH}"
+          rm -rf "$OUT_DIR"
+          mkdir -p "$OUT_DIR/bin"
+
+          # Build function — must run from $PKG_DIR (matches build.sh subshell behavior)
+          build_bin() {
+            local entrypoint="$1"
+            local outfile="$2"
+            local minify="${3:-true}"
+
+            echo "::group::Building $outfile"
+
+            cd "$PKG_DIR"
+            BUILD_TARGET="$BUILD_TARGET" \
+            BUILD_OUTFILE="$outfile" \
+            BUILD_VERSION="$VERSION" \
+            BUILD_CHANNEL="$CHANNEL" \
+            BUILD_LIBC="$LIBC" \
+            BUILD_MIGRATIONS="$MIGRATIONS_JSON" \
+            BUILD_ENTRYPOINT="$entrypoint" \
+            BUILD_TSCONFIG="$PKG_DIR/tsconfig.json" \
+            BUILD_EXTRA_ENTRYPOINTS="$VIM_EXTRA" \
+            BUILD_TREE_SITTER_WORKER_PATH="$VIM_TREE_SITTER_WORKER_PATH" \
+            BUILD_OPENCODE_WORKER_PATH="$WORKER_PATH" \
+            BUILD_MINIFY="$minify" \
+            bun --eval '
+          const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
+          const plugin = createSolidTransformPlugin()
+          const extraEntrypoints = (process.env.BUILD_EXTRA_ENTRYPOINTS || "")
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean)
+          await Bun.build({
+            entrypoints: [process.env.BUILD_ENTRYPOINT, ...extraEntrypoints],
+            conditions: ["browser"],
+            tsconfig: process.env.BUILD_TSCONFIG,
+            plugins: [plugin],
+            external: ["node-gyp"],
+            format: "esm",
+            minify: process.env.BUILD_MINIFY !== "false",
+            compile: {
+              autoloadBunfig: false,
+              autoloadDotenv: false,
+              autoloadTsconfig: true,
+              autoloadPackageJson: true,
+              target: process.env.BUILD_TARGET,
+              outfile: process.env.BUILD_OUTFILE,
+              execArgv: ["--user-agent=opencode/" + process.env.BUILD_VERSION, "--use-system-ca", "--"],
+              windows: {},
+            },
+            define: {
+              OPENCODE_VERSION: JSON.stringify(process.env.BUILD_VERSION),
+              OPENCODE_CHANNEL: JSON.stringify(process.env.BUILD_CHANNEL),
+              OPENCODE_LIBC: JSON.stringify(process.env.BUILD_LIBC),
+              OPENCODE_MIGRATIONS: process.env.BUILD_MIGRATIONS,
+              ...(process.env.BUILD_TREE_SITTER_WORKER_PATH
+                ? { OTUI_TREE_SITTER_WORKER_PATH: JSON.stringify(process.env.BUILD_TREE_SITTER_WORKER_PATH) }
+                : {}),
+              ...(process.env.BUILD_OPENCODE_WORKER_PATH
+                ? { OPENCODE_WORKER_PATH: JSON.stringify(process.env.BUILD_OPENCODE_WORKER_PATH) }
+                : {}),
+            },
+          }).then((result) => {
+            if (result.success) return
+            for (const log of result.logs) console.error(log)
+            process.exit(1)
+          })
+          '
+
+            echo "::endgroup::"
+          }
+
+          # Build both binaries (absolute paths, matching build.sh)
+          build_bin "$PKG_DIR/src/index.ts" "$OUT_DIR/bin/opencode"
+          build_bin "$VIM_DIR/src/index.ts" "$OUT_DIR/bin/opencode-vim" "false"
+
+          # Smoke test
+          echo "::group::Smoke tests"
+          "$OUT_DIR/bin/opencode" --help && echo "opencode OK" || echo "::warning::opencode smoke test failed"
+          "$OUT_DIR/bin/opencode-vim" --help && echo "opencode-vim OK" || echo "::warning::opencode-vim smoke test failed"
+          echo "::endgroup::"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/

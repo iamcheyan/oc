@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Git pre-commit hook to prevent API key leaks
+
+# Retrieve only the added/modified lines in staged files
+# To avoid false positives on deletions or metadata, we search lines starting with "+" in the staged diff.
+STAGED_DIFF=$(git diff --cached --unified=0 | grep "^+[^+]" || true)
+
+# Patterns to scan:
+# 1. Real Xiaomi MiMo tp- keys (alphanumeric only, 30+ chars after tp-)
+# 2. Real standard API keys starting with sk- (alphanumeric only, 30+ chars after sk-)
+PATTERNS='\btp-[a-zA-Z0-9]{30,}\b|\bsk-[a-zA-Z0-9]{30,}\b'
+
+FOUND_LEAKS=$(echo "$STAGED_DIFF" | grep -oE "$PATTERNS" || true)
+
+if [ -n "$FOUND_LEAKS" ]; then
+  echo -e "\033[0;31m[CRITICAL ERROR] Detected potential raw API key(s) in staged changes!\033[0m"
+  echo -e "\033[0;33mFound key(s):\033[0m"
+  echo "$FOUND_LEAKS" | sed 's/^/  - /'
+  echo ""
+  echo -e "\033[0;36mSuggestions:\033[0m"
+  echo -e "  1. Use environment variables (e.g. {env: MIMO_API_KEY} or process.env.MIMO_API_KEY)."
+  echo -e "  2. Mask the keys in local config files before committing."
+  echo -e "  3. Use the Vim TUI's 'backup config' function to merge and mask automatically."
+  echo ""
+  echo -e "\033[0;31mCommit aborted to prevent credential leak.\033[0m"
+  exit 1
+fi

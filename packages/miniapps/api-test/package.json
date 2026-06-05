@@ -1,0 +1,21 @@
+{
+  "name": "@opencode-ai/api-test",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/api-test.ts",
+    "./ui": "./src/api-test-ui.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile dist/api-test"
+  },
+  "dependencies": {
+    "@opentui/core": "workspace:*",
+    "json5": "^2.2.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}

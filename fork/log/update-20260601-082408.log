@@ -1,0 +1,66 @@
+[2026-06-01 08:24:08] === fork/update.sh started ===
+[2026-06-01 08:24:08] Branch: main
+[2026-06-01 08:24:08] HEAD: 63f1c6559
+[2026-06-01 08:24:08] Script: fork/update.sh
+
+══════════════════════════════════════════════════════════════════════════
+  Step 1: Check remote
+══════════════════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════════════════
+  Step 2: Fetch upstream
+══════════════════════════════════════════════════════════════════════════
+From https://github.com/anomalyco/opencode
+ + 73e3940c1...b9a307cb8 beta                -> upstream/beta  (forced update)
+   04c46117b..abaabdcb7  dev                 -> upstream/dev
+   864f54cc4..72cd2f5fa  feat/core-config-service -> upstream/feat/core-config-service
+ * [new branch]          fix/free-model-sort -> upstream/fix/free-model-sort
+ * [new branch]          fix/tui-question-keybindings -> upstream/fix/tui-question-keybindings
+ * [new branch]          fix/tui-syntax-builtins -> upstream/fix/tui-syntax-builtins
+ * [new branch]          jlongster/project-paths -> upstream/jlongster/project-paths
+ * [new branch]          kit/tui-scenario-preview -> upstream/kit/tui-scenario-preview
+ * [new branch]          nxl/session-status-parent-id -> upstream/nxl/session-status-parent-id
+ * [new branch]          oc-refactor-queued-prompts -> upstream/oc-refactor-queued-prompts
+   7342e9409..8f2afba7a  production          -> upstream/production
+[2026-06-01 08:24:09] Fetch completed
+
+══════════════════════════════════════════════════════════════════════════
+  Step 3: Check new commits
+══════════════════════════════════════════════════════════════════════════
+[2026-06-01 08:24:10] Upstream has 32 new commit(s)
+
+══════════════════════════════════════════════════════════════════════════
+  Step 4: Upstream changes
+══════════════════════════════════════════════════════════════════════════
+abaabdcb7 fix(tui): remount session view on session switch (#30129)
+8f2afba7a zen: deepseek flash
+31f94f205 refactor(worktree): move project out of repository
+542b08237 chore: generate
+2f2fcc165 fix(opencode): remove automatic full session diffs (#30127)
+a69b70d5c fix(core): allow skipping migration execution
+02edad83b test(tui): skip crashing keymap textarea renderer
+5661af203 feat(worktree): add managed workspace cloning (#30117)
+331bed246 fix(core): stabilize migration registry generation (#30105)
+f401f01c0 chore: update nix node_modules hashes
+6f07f10dd chore: generate
+e8dd8f7fe tui(run): use keymap instead of raw key events (#30077)
+a29196720 chore: generate
+a893ca857 sync
+25edeaf47 fix(sdk): preserve generated event contracts
+1afa9e32c chore: update nix node_modules hashes
+102c8353e chore: generate
+7f571d36e refactor(core): move database schema ownership (#29068)
+6bcb9cb9b chore: generate
+0269d6f5d fix(core): isolate location layer instances
+
+══════════════════════════════════════════════════════════════════════════
+  Step 6: Merge
+══════════════════════════════════════════════════════════════════════════
+[2026-06-01 08:24:10] Merging upstream/dev into main
+[2026-06-01 08:24:10] Remaining conflicts after .github/ auto-resolve:
+[2026-06-01 08:24:10]   - .opencode/opencode.jsonc
+[2026-06-01 08:24:10]   - AGENTS.md
+[2026-06-01 08:24:10]   - packages/opencode/src/cli/cmd/tui/app.tsx
+[2026-06-01 08:24:10] Attempting auto-resolve with opencode
+[2026-06-01 08:28:27] opencode failed to resolve all conflicts. Remaining:
+[2026-06-01 08:28:27]   - .opencode/opencode.jsonc
