@@ -4,6 +4,8 @@ A LazyVim-inspired Vim TUI frontend for [opencode](https://github.com/anomalyco/
 
 This fork adds a standalone Vim TUI (`packages/opencode-vim/`) alongside the upstream's Web, Desktop, and default TUI clients, with insert/normal mode workflow optimized for keyboard-first users.
 
+![opencode-vim screenshot](fork/static/screenshot.jpeg)
+
 ## Fork Features
 
 - **Vim Modes** — Insert/normal mode workflow for keyboard-first navigation

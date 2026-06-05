@@ -1,6 +1,67 @@
 #!/usr/bin/env bash
-# Git pre-commit hook to prevent API key leaks
+# Git pre-commit hook to prevent API key leaks and sync fork-owned files
 
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+
+# ─── Sync fork-owned files ───────────────────────────────────────────────────
+# Keep root-level copies in sync with the canonical sources in fork/
+sync_fork_files() {
+  local dirty=false
+
+  # README.md
+  if [ -f "$ROOT_DIR/fork/README.md" ]; then
+    # Remove translation files (upstream leftovers)
+    for f in README.ar.md README.bn.md README.br.md README.bs.md README.da.md \
+             README.de.md README.es.md README.fr.md README.gr.md README.it.md \
+             README.ja.md README.ko.md README.no.md README.pl.md README.ru.md \
+             README.th.md README.tr.md README.uk.md README.vi.md README.zh.md README.zht.md; do
+      if [ -f "$ROOT_DIR/$f" ]; then
+        rm -f "$ROOT_DIR/$f"
+        git add "$ROOT_DIR/$f" 2>/dev/null || true
+      fi
+    done
+    cp "$ROOT_DIR/fork/README.md" "$ROOT_DIR/README.md"
+    git add "$ROOT_DIR/README.md"
+    dirty=true
+  fi
+
+  # AGENTS.md
+  if [ -f "$ROOT_DIR/fork/AGENTS.root.md" ]; then
+    cp "$ROOT_DIR/fork/AGENTS.root.md" "$ROOT_DIR/AGENTS.md"
+    git add "$ROOT_DIR/AGENTS.md"
+    dirty=true
+  fi
+
+  # GitHub workflows
+  if [ -d "$ROOT_DIR/fork/github" ]; then
+    mkdir -p "$ROOT_DIR/.github/workflows"
+    cp "$ROOT_DIR/fork/github/"*.y*ml "$ROOT_DIR/.github/workflows/" 2>/dev/null || true
+    git add "$ROOT_DIR/.github/"
+    dirty=true
+  fi
+
+  # Git hooks
+  if [ -f "$ROOT_DIR/fork/pre-commit" ]; then
+    mkdir -p "$ROOT_DIR/.husky"
+    cp "$ROOT_DIR/fork/pre-commit" "$ROOT_DIR/.husky/pre-commit"
+    chmod +x "$ROOT_DIR/.husky/pre-commit"
+    git add "$ROOT_DIR/.husky/pre-commit"
+    dirty=true
+  fi
+
+  if [ "$dirty" = true ]; then
+    echo -e "\033[0;36m  sync: fork-owned files refreshed\033[0m"
+  fi
+}
+
+sync_fork_files
+
+# ─── Upstream seams check ────────────────────────────────────────────────────
+if [ -f "$ROOT_DIR/fork/check-upstream-seams.sh" ]; then
+  bash "$ROOT_DIR/fork/check-upstream-seams.sh" || exit 1
+fi
+
+# ─── API key leak check ──────────────────────────────────────────────────────
 # Retrieve only the added/modified lines in staged files
 # To avoid false positives on deletions or metadata, we search lines starting with "+" in the staged diff.
 STAGED_DIFF=$(git diff --cached --unified=0 | grep "^+[^+]" || true)
