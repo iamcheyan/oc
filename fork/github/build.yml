@@ -18,11 +18,11 @@ jobs:
           - os: macos-latest
             platform_os: darwin
             platform_arch: arm64
-            artifact_name: opencode-darwin-arm64
+            artifact_name: opencode-vim-darwin-arm64
           - os: ubuntu-latest
             platform_os: linux
             platform_arch: x64
-            artifact_name: opencode-linux-x64
+            artifact_name: opencode-vim-linux-x64
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -123,7 +123,7 @@ jobs:
           BUILD_TARGET="bun-${PLATFORM_OS}-${PLATFORM_ARCH}"
 
           # Output directory
-          OUT_DIR="$ROOT_DIR/dist/opencode-${PLATFORM_OS}-${PLATFORM_ARCH}"
+          OUT_DIR="$ROOT_DIR/dist/opencode-vim-${PLATFORM_OS}-${PLATFORM_ARCH}"
           rm -rf "$OUT_DIR"
           mkdir -p "$OUT_DIR/bin"
 
@@ -196,13 +196,11 @@ jobs:
             echo "::endgroup::"
           }
 
-          # Build both binaries (absolute paths, matching build.sh)
-          build_bin "$PKG_DIR" "$PKG_DIR/src/index.ts" "$OUT_DIR/bin/opencode"
+          # Build opencode-vim only
           build_bin "$VIM_DIR" "$VIM_DIR/src/index.ts" "$OUT_DIR/bin/opencode-vim" "false"
 
           # Smoke test
-          echo "::group::Smoke tests"
-          "$OUT_DIR/bin/opencode" --help && echo "opencode OK" || echo "::warning::opencode smoke test failed"
+          echo "::group::Smoke test"
           "$OUT_DIR/bin/opencode-vim" --help && echo "opencode-vim OK" || echo "::warning::opencode-vim smoke test failed"
           echo "::endgroup::"
 
@@ -227,7 +225,7 @@ jobs:
 
       - name: Package release assets
         run: |
-          for dir in artifacts/opencode-*; do
+          for dir in artifacts/opencode-vim-*; do
             name="$(basename "$dir")"
             bin_dir="$(find "$dir" -type d -name bin | head -1)"
             tar -czf "${name}.tar.gz" -C "$bin_dir" .
@@ -248,5 +246,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$TAG" \
             --generate-notes \
-            opencode-darwin-arm64.tar.gz \
-            opencode-linux-x64.tar.gz
+            opencode-vim-darwin-arm64.tar.gz \
+            opencode-vim-linux-x64.tar.gz
