@@ -354,7 +354,7 @@ if $ALL_EXIST; then
 fi
 
 # ─── Forked Prompt sync check ─────────────────────────────────────────────────
-UPSTREAM_PROMPT="packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx"
+UPSTREAM_PROMPT="packages/tui/src/component/prompt/index.tsx"
 FORK_PROMPT="packages/opencode-vim/src/component/prompt.tsx"
 if ! diff -q <(git show "$UPSTREAM_BRANCH:$UPSTREAM_PROMPT") "$FORK_PROMPT" >/dev/null 2>&1; then
   echo ""

@@ -5,6 +5,7 @@ import {
   For,
   Match,
   on,
+  onCleanup,
   onMount,
   Show,
   Switch,
@@ -17,7 +18,7 @@ import { useSync } from "@tui/context/sync"
 import { MinimalRendererBackground, selectedForeground, useForkTheme } from "@/util/theme"
 import { useProject } from "@tui/context/project"
 import { useDialog } from "@tui/ui/dialog"
-import { useTuiConfig } from "@tui/context/tui-config"
+import { useTuiConfig } from "@tui/config"
 import { useKV } from "@tui/context/kv"
 import { useSDK } from "@tui/context/sdk"
 import { useEditorContext } from "@tui/context/editor"
@@ -47,7 +48,8 @@ import {
   useSession,
 } from "@/upstream/session"
 import { errorMessage } from "@/util/error"
-import { useExit } from "@tui/context/exit"
+import { useEpilogue } from "@tui/context/epilogue"
+import { sessionEpilogue } from "@tui/util/presentation"
 import { AutocompleteHostProvider } from "@/context/autocomplete-host"
 import { MinimalSessionPromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
 import { Sidebar } from "@/component/sidebar"
@@ -366,7 +368,7 @@ export function MinimalSession() {
   const toast = useToast()
   const local = useLocal()
   const dimensions = useTerminalDimensions()
-  const exit = useExit()
+  const setEpilogue = useEpilogue()
   const directory = useDirectory()
   const leaderMenu = createMemo(() => getLeaderMenu(directory()))
 
@@ -600,10 +602,10 @@ export function MinimalSession() {
   }))
 
   createEffect(() => {
-    const id = session()?.id
-    if (!id) return
-    exit.message.set(`👋 opencode -s ${id}`)
+    const title = Locale.truncate(session()?.title ?? "", 50)
+    setEpilogue(sessionEpilogue({ title, sessionID: session()?.id }))
   })
+  onCleanup(() => setEpilogue())
 
   createEffect(() => {
     const sessionID = route.sessionID

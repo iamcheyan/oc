@@ -46,11 +46,11 @@ Upstream declined official TUI extension hooks. Fork keeps a **fixed allowlist**
 - `fork/upstream-seams.allowlist`
 - `bash fork/check-upstream-seams.sh` (also in build, update, pre-commit, CI)
 
-Do not add fork behavior under `packages/opencode/src/**` outside the allowlist.
+Do not add fork behavior under `packages/opencode/src/**` or `packages/tui/src/**` outside the allowlist.
 
 | File | Purpose |
 |------|---------|
-| `packages/opencode/src/cli/cmd/tui/app.tsx` | `OPENCODE_TUI_ROOT_COMPONENTS`, `OPENCODE_MINIMAL_*` env, update-check skip |
+| `packages/tui/src/app.tsx` | `OPENCODE_TUI_ROOT_COMPONENTS`, `OPENCODE_MINIMAL_*` env, update-check skip |
 | `packages/opencode/src/session/processor.ts` | permission reject clears `ctx.blocked` |
 
 Session context is **fork-owned**: `packages/opencode-vim/src/context/session-context.ts`. Do not re-export `context` from `session/index.tsx`.

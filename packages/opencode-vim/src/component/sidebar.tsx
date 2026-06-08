@@ -2,9 +2,9 @@ import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
 import { createMemo, Show } from "solid-js"
 import { useForkTheme } from "@/util/theme"
-import { useTuiConfig } from "@tui/context/tui-config"
+import { useTuiConfig } from "@tui/config"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
-import { TuiPluginRuntime } from "@opencode/cli/cmd/tui/plugin/runtime"
+import { usePluginRuntime } from "@tui/plugin/runtime"
 
 import { getScrollAcceleration } from "@tui/util/scroll"
 import { WorkspaceLabel } from "@tui/component/workspace-label"
@@ -14,6 +14,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean; compact?:
   const sync = useSync()
   const { theme } = useForkTheme()
   const tuiConfig = useTuiConfig()
+  const pluginRuntime = usePluginRuntime()
   const session = createMemo(() => sync.session.get(props.sessionID))
   const workspace = () => {
     const workspaceID = session()?.workspaceID
@@ -45,7 +46,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean; compact?:
           }}
         >
           <box flexShrink={0} gap={1} paddingRight={1}>
-            <TuiPluginRuntime.Slot
+            <pluginRuntime.Slot
               name="sidebar_title"
               mode="single_winner"
               session_id={props.sessionID}
@@ -80,14 +81,14 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean; compact?:
                   <text fg={theme.textMuted}>{session()!.share!.url}</text>
                 </Show>
               </box>
-            </TuiPluginRuntime.Slot>
-            <TuiPluginRuntime.Slot name="sidebar_content" session_id={props.sessionID} />
+            </pluginRuntime.Slot>
+            <pluginRuntime.Slot name="sidebar_content" session_id={props.sessionID} />
           </box>
         </scrollbox>
 
         <Show when={!props.hideFooter}>
           <box flexShrink={0} gap={1} paddingTop={1}>
-            <TuiPluginRuntime.Slot name="sidebar_footer" mode="single_winner" session_id={props.sessionID}>
+            <pluginRuntime.Slot name="sidebar_footer" mode="single_winner" session_id={props.sessionID}>
               <text fg={theme.textMuted}>
                 <span style={{ fg: theme.success }}>•</span> <b>Open</b>
                 <span style={{ fg: theme.text }}>
@@ -95,7 +96,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean; compact?:
                 </span>{" "}
                 <span>{InstallationVersion}</span>
               </text>
-            </TuiPluginRuntime.Slot>
+            </pluginRuntime.Slot>
           </box>
         </Show>
       </box>

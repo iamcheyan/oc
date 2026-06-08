@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, Show } from "solid-js"
 import type { JSX } from "@opentui/solid"
-import { TuiPluginRuntime } from "@opencode/cli/cmd/tui/plugin/runtime"
+import { usePluginRuntime } from "@tui/plugin/runtime"
 import { useDirectory } from "@tui/context/directory"
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
@@ -140,19 +140,21 @@ export function MinimalHomePromptFooter(props: {
   onDownWhenEmpty?: () => void
   onEnterEmpty?: () => boolean | void
 }) {
+  const pluginRuntime = usePluginRuntime()
+
   return (
     <box flexShrink={0} width="100%">
-      <TuiPluginRuntime.Slot name="home_prompt" mode="replace" ref={props.bind}>
+      <pluginRuntime.Slot name="home_prompt" mode="replace" ref={props.bind}>
         <Prompt
           compact
           ref={props.bind}
-          right={<TuiPluginRuntime.Slot name="home_prompt_right" />}
+          right={<pluginRuntime.Slot name="home_prompt_right" />}
           placeholders={props.placeholders}
           onUpWhenEmpty={props.onUpWhenEmpty}
           onDownWhenEmpty={props.onDownWhenEmpty}
           onEnterEmpty={props.onEnterEmpty}
         />
-      </TuiPluginRuntime.Slot>
+      </pluginRuntime.Slot>
     </box>
   )
 }
@@ -166,9 +168,11 @@ export function MinimalSessionPromptFooter(props: {
   right?: JSX.Element
   onSubmit?: () => void
 }) {
+  const pluginRuntime = usePluginRuntime()
+
   return (
     <box flexShrink={0} width="100%">
-      <TuiPluginRuntime.Slot
+      <pluginRuntime.Slot
         name="session_prompt"
         mode="replace"
         session_id={props.sessionID}
@@ -185,9 +189,9 @@ export function MinimalSessionPromptFooter(props: {
           onSubmit={props.onSubmit}
           sessionID={props.sessionID}
           menu={props.menu}
-          right={props.right ?? <TuiPluginRuntime.Slot name="session_prompt_right" session_id={props.sessionID} />}
+          right={props.right ?? <pluginRuntime.Slot name="session_prompt_right" session_id={props.sessionID} />}
         />
-      </TuiPluginRuntime.Slot>
+      </pluginRuntime.Slot>
     </box>
   )
 }

@@ -13,6 +13,7 @@ ALLOWLIST="$SCRIPT_DIR/upstream-seams.allowlist"
 DRIFT_ALLOWLIST="$SCRIPT_DIR/upstream-drift.allowlist"
 UPSTREAM_REF="${UPSTREAM_REF:-upstream/dev}"
 UPSTREAM_SRC="$ROOT_DIR/packages/opencode/src"
+TUI_SRC="$ROOT_DIR/packages/tui/src"
 
 cd "$ROOT_DIR"
 
@@ -69,17 +70,18 @@ while IFS= read -r path; do
     FAILED=1
   fi
 done <<EOF
-$(SEARCH "$MARKER_PATTERN" "$UPSTREAM_SRC")
+$(SEARCH "$MARKER_PATTERN" "$UPSTREAM_SRC" "$TUI_SRC")
 EOF
 
-SESSION_INDEX="packages/opencode/src/cli/cmd/tui/routes/session/index.tsx"
-if GREP '^export const context' "$ROOT_DIR/$SESSION_INDEX"; then
+SESSION_INDEX="packages/tui/src/routes/session/index.tsx"
+if [ -f "$ROOT_DIR/$SESSION_INDEX" ] && GREP '^export const context' "$ROOT_DIR/$SESSION_INDEX"; then
   echo -e "${RED}✗ $SESSION_INDEX must not export Session context (use opencode-vim/src/context/session-context.ts)${RESET}"
   FAILED=1
 fi
 
-if GREP 'OPENCODE_MINIMAL' "$ROOT_DIR/packages/opencode/src/cli/cmd/tui/context/theme.tsx"; then
-  echo -e "${RED}✗ theme.tsx must not contain OPENCODE_MINIMAL (use opencode-vim useForkTheme)${RESET}"
+THEME_CONTEXT="packages/tui/src/context/theme.tsx"
+if [ -f "$ROOT_DIR/$THEME_CONTEXT" ] && GREP 'OPENCODE_MINIMAL' "$ROOT_DIR/$THEME_CONTEXT"; then
+  echo -e "${RED}✗ $THEME_CONTEXT must not contain OPENCODE_MINIMAL (use opencode-vim useForkTheme)${RESET}"
   FAILED=1
 fi
 
@@ -91,8 +93,8 @@ check_required() {
   fi
 }
 
-check_required "$ROOT_DIR/packages/opencode/src/cli/cmd/tui/app.tsx" 'OPENCODE_TUI_ROOT_COMPONENTS'
-check_required "$ROOT_DIR/packages/opencode/src/cli/cmd/tui/app.tsx" 'OPENCODE_MINIMAL'
+check_required "$ROOT_DIR/packages/tui/src/app.tsx" 'OPENCODE_TUI_ROOT_COMPONENTS'
+check_required "$ROOT_DIR/packages/tui/src/app.tsx" 'OPENCODE_MINIMAL'
 check_required "$ROOT_DIR/packages/opencode/src/session/processor.ts" 'FORK-SEAM \(opencode-vim\): permission reject'
 
 for allowed in "${ALLOWED[@]}"; do
@@ -138,7 +140,7 @@ if [ "$FAILED" -eq 0 ] && [ -f "$DRIFT_ALLOWLIST" ] && git rev-parse --verify "$
       DRIFT_FAILED=1
     fi
   done <<EOF
-$(git diff --name-only "$UPSTREAM_REF" -- "$UPSTREAM_SRC" 2>/dev/null || true)
+$(git diff --name-only "$UPSTREAM_REF" -- "$UPSTREAM_SRC" "$TUI_SRC" 2>/dev/null || true)
 EOF
 
   if [ "$DRIFT_FAILED" -ne 0 ]; then

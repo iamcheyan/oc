@@ -8,11 +8,12 @@ Fork Vim/minimal behavior used to live in `packages/opencode/src/**`, which caus
 
 - Allowlist: `fork/upstream-seams.allowlist` (currently **2 files**).
 - Check: `bash fork/check-upstream-seams.sh` (also runs from `fork/build.sh`, `fork/update.sh`, pre-commit, CI).
-- Do **not** add new fork logic under `packages/opencode/src/**` unless the allowlist is updated deliberately.
+- Do **not** add new fork logic under `packages/opencode/src/**` or `packages/tui/src/**` outside the allowlist unless updated deliberately.
+- After the TUI package extraction (`specs/tui-package.md`), canonical TUI paths are under `packages/tui/src/**`, not `packages/opencode/src/cli/cmd/tui/**`.
 
 ## Remaining Upstream Seams (required)
 
-### `packages/opencode/src/cli/cmd/tui/app.tsx`
+### `packages/tui/src/app.tsx`
 
 | Seam | Mechanism | Fork owner |
 |------|-----------|------------|
@@ -54,12 +55,12 @@ Do not add fork-only behavior back into:
 
 - `packages/opencode/src/cli/cmd/cli.ts`
 - `packages/opencode/src/cli/cmd/model-select.ts`
-- `packages/opencode/src/cli/cmd/tui/component/dialog-skill.tsx`
-- `packages/opencode/src/cli/cmd/tui/ui/dialog-select.tsx`
-- `packages/opencode/src/cli/cmd/tui/ui/dialog.tsx`
-- `packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx`
-- `packages/opencode/src/cli/cmd/tui/component/prompt/autocomplete.tsx`
-- `packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx`
+- `packages/tui/src/component/dialog-skill.tsx`
+- `packages/tui/src/ui/dialog-select.tsx`
+- `packages/tui/src/ui/dialog.tsx`
+- `packages/tui/src/routes/session/sidebar.tsx`
+- `packages/tui/src/component/prompt/autocomplete.tsx`
+- `packages/tui/src/component/prompt/index.tsx`
 
 Fork implementations: `opencode-vim/src/cli.ts`, `model-select.ts`, `component/*`, `routes/*`.
 
@@ -73,10 +74,11 @@ When `OPENCODE_TUI_ROOT_COMPONENTS` is set (via `opencode-vim` startup), the TUI
 |------|----------|-------|
 | TUI infrastructure | `@tui/context/*`, `@tui/ui/dialog*`, `@tui/keymap`, borders, spinners | Imported by fork routes and prompt |
 | Session dialogs / prompts | Re-exported from `@tui/routes/session/*` via `opencode-vim/src/upstream/session.ts` | `DialogMessage`, `PermissionPrompt`, `QuestionPrompt`, `SubagentFooter` |
-| Default full TUI | `packages/opencode/src/cli/cmd/tui/routes/session/index.tsx` | Full `ToolPart` + per-tool renderers; used when **not** in minimal mode |
-| Diff viewer plugin | `packages/opencode/src/cli/cmd/tui/feature-plugins/system/diff-viewer.tsx` | Restored to upstream; fork does not fork this file |
-| Locale helper | `opencode-vim/src/util/locale.ts` | Re-exports `packages/opencode/src/util/locale.ts` |
-| Thread bootstrap | `opencode-vim/src/upstream/thread.ts` | Re-exports `TuiThreadCommand` |
+| Default full TUI | `packages/tui/src/routes/session/index.tsx` | Full `ToolPart` + per-tool renderers; used when **not** in minimal mode |
+| Diff viewer plugin | `packages/tui/src/feature-plugins/system/diff-viewer.tsx` | Restored to upstream; fork does not fork this file |
+| Locale helper | `opencode-vim/src/util/locale.ts` | Re-exports `@tui/util/locale` or `packages/opencode/src/util/locale.ts` |
+| Thread bootstrap | `opencode-vim/src/upstream/thread.ts` | Re-exports `TuiThreadCommand` from `@opencode/cli/cmd/tui` |
+| `@tui/*` path alias | `opencode-vim/tsconfig.json` → `../tui/src/*` | Compile-time coupling; update after upstream TUI moves |
 
 ### UI duplicates (fork maintains; upstream file still exists for default TUI)
 
@@ -85,9 +87,9 @@ When `OPENCODE_TUI_ROOT_COMPONENTS` is set (via `opencode-vim` startup), the TUI
 | `routes/home.tsx` | TUI home route | Minimal home shell |
 | `routes/session.tsx` (~774 lines) | `routes/session/index.tsx` (~2500 lines, subset) | Message list; `CompactTextPart` / `CompactReasoningPart` use `<markdown>` |
 | `component/simple-tool.tsx` (~579 lines) | `session/index.tsx` tool section (`ToolPart`, `Shell`, `Read`, `Edit`, `GenericTool`, …) | Single component replaces per-tool UI; edit uses `<diff>` + `metadata.diff` |
-| `component/prompt.tsx` (~2100 lines) | `component/prompt/index.tsx` (~1700 lines) | Prompt editor; Vim bindings, `@alias/path` pre-expand |
-| `component/autocomplete.tsx` | `component/prompt/autocomplete.tsx` | Mention / command autocomplete for fork prompt |
-| `component/sidebar.tsx` | `routes/session/sidebar.tsx` | Session sidebar; fork adds `compact` / `bare` / `hideFooter` |
+| `component/prompt.tsx` (~2100 lines) | `packages/tui/src/component/prompt/index.tsx` (~1700 lines) | Prompt editor; Vim bindings, `@alias/path` pre-expand; **high drift** |
+| `component/autocomplete.tsx` | `packages/tui/src/component/prompt/autocomplete.tsx` | Mention / command autocomplete for fork prompt |
+| `component/sidebar.tsx` | `packages/tui/src/routes/session/sidebar.tsx` | Session sidebar; fork adds `compact` / `bare` / `hideFooter` |
 | `component/dialog-skill.tsx` | `component/dialog-skill.tsx` | Skill picker; fork adds `initialFilter`; uses upstream `DialogSelect` |
 | `cli.ts` | Former `cli/cmd/cli.ts` (fork-only registration now) | Headless / CLI session tool output (separate from TUI `SimpleTool`) |
 | `model-select.ts` | Former `cli/cmd/model-select.ts` | Model selection command |
@@ -144,7 +146,8 @@ flowchart TB
 
 - **High drift risk**: `simple-tool.tsx`, `prompt.tsx`, `autocomplete.tsx` — port upstream tool/prompt/session UI changes by hand.
 - **Low drift risk**: `upstream/session.ts`, `util/locale.ts` (re-exports only).
-- **Upstream diff target**: only `app.tsx` and `processor.ts` under `packages/opencode/src` (enforced by `fork/check-upstream-seams.sh`).
+- **Upstream diff target**: `packages/tui/src/app.tsx` and `packages/opencode/src/session/processor.ts` (enforced by `fork/check-upstream-seams.sh`).
+- **TUI migration incident**: see `fork/docs/202606082200_tui-package-migration-build-fix.md`.
 
 ## Fork-Owned Areas (default keep fork on conflict)
 

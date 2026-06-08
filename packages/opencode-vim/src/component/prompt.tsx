@@ -17,7 +17,7 @@ import { fileURLToPath } from "url"
 import { Filesystem } from "@/util/filesystem"
 import { useLocal } from "@tui/context/local"
 import { tint, useForkTheme } from "@/util/theme"
-import { EmptyBorder, SplitBorder } from "@tui/component/border"
+import { EmptyBorder, SplitBorder } from "@tui/ui/border"
 import { Spinner, SPINNER_FRAMES } from "@tui/component/spinner"
 import { useSDK } from "@tui/context/sdk"
 import { useRoute } from "@tui/context/route"
@@ -27,24 +27,23 @@ import { useEvent } from "@tui/context/event"
 import { editorSelectionKey, useEditorContext, type EditorSelection } from "@tui/context/editor"
 import { MessageID, PartID } from "@/session/schema"
 import { createStore, produce, unwrap } from "solid-js/store"
-import { usePromptHistory, type PromptInfo } from "@tui/component/prompt/history"
-import { computePromptTraits } from "@tui/component/prompt/traits"
-import { assign, expandPastedTextPlaceholders } from "@tui/component/prompt/part"
-import { usePromptStash } from "@tui/component/prompt/stash"
+import { usePromptHistory, type PromptInfo } from "@tui/prompt/history"
+import { computePromptTraits } from "@tui/prompt/traits"
+import { expandPastedTextPlaceholders } from "@tui/prompt/part"
+import { usePromptStash } from "@tui/prompt/stash"
 import { DialogStash } from "@tui/component/dialog-stash"
 import { type AutocompleteRef } from "./autocomplete"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
-import * as Editor from "@tui/util/editor"
-import { useExit } from "@tui/context/exit"
-import * as Clipboard from "@tui/util/clipboard"
+import { openEditor } from "@tui/editor"
+import { destroyRenderer } from "@tui/util/renderer"
+import { read as readClipboard } from "@tui/clipboard"
 import type { AssistantMessage, FilePart, UserMessage } from "@opencode-ai/sdk/v2"
-import { TuiEvent } from "@tui/event"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
 import { ConfigReference } from "@/config/reference"
 import { Reference } from "@/reference/reference"
 import { expandReferencePathMentions, mergeReferencePromptParts } from "@/session/reference-prompt-parts"
-import { formatDuration } from "@/util/format"
+import { formatDuration } from "@tui/util/format"
 import { createColors, createFrames } from "@tui/ui/spinner"
 import { useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderConnect } from "@tui/component/dialog-provider"
@@ -66,7 +65,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "@tui/component/workspace-label"
 import { useBindings, useCommandShortcut, useOpencodeKeymap } from "@tui/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
-import { useTuiConfig } from "@tui/context/tui-config"
+import { useTuiConfig } from "@tui/config"
 import { useAutocompleteHost } from "@/context/autocomplete-host"
 import { useVimMode } from "@/feature/vim-mode"
 import { getLeaderMenu, isSeparator, type LeaderGroup, type LeaderLeaf, type LeaderSeparator } from "@/feature/leader-menu"
@@ -437,7 +436,7 @@ export function Prompt(props: PromptProps) {
   let promptPartTypeId = 0
   const event = useEvent()
 
-  event.on(TuiEvent.PromptAppend.type, (evt) => {
+  event.on("tui.prompt.append", (evt) => {
     if (!input || input.isDestroyed) return
     input.insertText(evt.properties.text)
     setTimeout(() => {
@@ -576,7 +575,7 @@ export function Prompt(props: PromptProps) {
         run: async (ctx: CommandContext<Renderable, KeyEvent>) => {
           ctx.event.preventDefault()
           ctx.event.stopPropagation()
-          const content = await Clipboard.read()
+          const content = await readClipboard()
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({
               filename: "clipboard",
@@ -620,7 +619,7 @@ export function Prompt(props: PromptProps) {
           const nonTextParts = store.prompt.parts.filter((p) => p.type !== "text")
 
           const value = text
-          const content = await Editor.open({ value, renderer })
+          const content = await openEditor({ value, renderer })
           if (!content) return
 
           input.setText(content)
@@ -1238,7 +1237,7 @@ export function Prompt(props: PromptProps) {
     if (!agent) return false
     const trimmed = store.prompt.input.trim()
     if (trimmed === "exit" || trimmed === "quit" || trimmed === ":q") {
-      void exit()
+      destroyRenderer(renderer)
       return true
     }
     const selectedModel = local.model.current()
@@ -1415,7 +1414,7 @@ export function Prompt(props: PromptProps) {
               type: "text",
               text: inputText,
             },
-            ...nonTextParts.map(assign),
+            ...nonTextParts,
           ],
         })
         .catch(() => {})
@@ -1447,8 +1446,6 @@ export function Prompt(props: PromptProps) {
     vimMode.enterNormal()
     return true
   }
-  const exit = useExit()
-
   function pasteText(text: string, virtualText: string) {
     const currentOffset = input.visualCursor.offset
     const extmarkStart = currentOffset

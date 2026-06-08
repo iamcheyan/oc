@@ -2,7 +2,7 @@ import { createContext } from "solid-js"
 import type { Provider } from "@opencode-ai/sdk/v2"
 import type { ThinkingMode } from "@tui/context/thinking"
 import type { useSync } from "@tui/context/sync"
-import type { useTuiConfig } from "@tui/context/tui-config"
+import type { useTuiConfig } from "@tui/config"
 
 export type SessionContextValue = {
   width: number

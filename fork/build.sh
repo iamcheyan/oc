@@ -278,7 +278,7 @@ main() {
     exit 1
   fi
 
-  local worker_path="./src/cli/cmd/tui/worker.ts"
+  local worker_path="./src/cli/tui/worker.ts"
   local worker_relative_path
   worker_relative_path="$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]).replace(chr(92), "/"))' "$parser_worker" "$PKG_DIR")"
   local bunfs_root="/\$bunfs/root/"
