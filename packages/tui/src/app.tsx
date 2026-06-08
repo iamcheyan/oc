@@ -7,7 +7,7 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { EpilogueProvider } from "./context/epilogue"
 import * as Selection from "./util/selection"
-import { createCliRenderer, MouseButton, type CliRenderer } from "@opentui/core"
+import { createCliRenderer, MouseButton, type CliRenderer, type CliRendererConfig } from "@opentui/core"
 import { RouteProvider, useRoute } from "./context/route"
 import {
   Switch,
@@ -164,23 +164,12 @@ export function tuiRendererConfig(_config: TuiConfig.Resolved): CliRendererConfi
     useMouse: mouseEnabled,
     consoleOptions: {
       keyBindings: [{ name: "y", ctrl: true, action: "copy-selection" }],
-      onCopySelection: (text) => {
-        Clipboard.copy(text).catch((error) => {
-          console.error(`Failed to copy console selection to clipboard: ${error}`)
-        })
-      },
     },
   }
 }
 
 export function createTuiRenderer(config: TuiConfig.Resolved) {
   return createCliRenderer(tuiRendererConfig(config))
-}
-
-export type TuiHandle = {
-  ready: Promise<void>
-  done: Promise<void>
-  exit: Exit
 }
 
 export type TuiInput = {
@@ -233,21 +222,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const output = yield* Effect.scoped(
     Effect.gen(function* () {
       const renderer = yield* Effect.acquireRelease(
-        Effect.tryPromise(() =>
-          createCliRenderer({
-            externalOutputMode: "passthrough",
-            targetFps: 60,
-            gatherStats: false,
-            exitOnCtrlC: false,
-            useKittyKeyboard: {},
-            autoFocus: false,
-            openConsoleOnError: false,
-            useMouse: !Flag.OPENCODE_DISABLE_MOUSE && input.config.mouse,
-            consoleOptions: {
-              keyBindings: [{ name: "y", ctrl: true, action: "copy-selection" }],
-            },
-          }),
-        ),
+        Effect.tryPromise(() => createCliRenderer(tuiRendererConfig(input.config))),
         (renderer) => Effect.sync(() => destroyRenderer(renderer)),
       )
       win32DisableProcessedInput()

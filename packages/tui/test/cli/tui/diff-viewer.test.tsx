@@ -121,7 +121,7 @@ async function renderDiffViewer(vcsDiff: unknown[], height = 20) {
         vcs: {
           diff: async (input: unknown) => {
             vcsDiffInput = input
-            return { data: [] }
+            return { data: vcsDiff }
           },
         },
         session: { diff: async () => ({ data: [] }) },
@@ -166,19 +166,25 @@ async function renderDiffViewer(vcsDiff: unknown[], height = 20) {
     )
   }
 
-  const app = await testRender(() => <Harness />, { width: 80, height: 20 })
-  try {
-    await waitForCommand(app, commands, "diff.close")
-    expect(current).toEqual({ name: "diff", params: { mode: "git", sessionID: "session-1", returnRoute: startRoute } })
-    expect(vcsDiffInput).toEqual({ directory: "/repo/session", mode: "git", context: 12 })
-
-    expect(commands.has("diff.close")).toBe(true)
-    commands.get("diff.close")!.run?.({} as never)
-    expect(current).toEqual(startRoute)
-  } finally {
-    app.renderer.destroy()
+  const app = await testRender(() => <Harness />, { width: 80, height })
+  await waitForCommand(app, commands, "diff.close")
+  return {
+    app,
+    commands,
+    current: () => current,
+    vcsDiffInput: () => vcsDiffInput,
   }
-})
+}
+
+const startRoute: TuiRouteCurrent = { name: "session", params: { sessionID: "session-1" } }
+
+function findRenderable(root: Renderable, id: string): Renderable | undefined {
+  if (root.id === id) return root
+  return root
+    .getChildren()
+    .map((child) => findRenderable(child, id))
+    .find(Boolean)
+}
 
 const session = {
   id: "session-1",
