@@ -111,7 +111,7 @@ jobs:
             exit 1
           fi
 
-          WORKER_PATH="./src/cli/cmd/tui/worker.ts"
+          WORKER_PATH="./src/cli/tui/worker.ts"
           WORKER_RELATIVE="$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]).replace(chr(92), "/"))' "$PARSER_WORKER" "$PKG_DIR")"
           BUNFS_ROOT="/\$bunfs/root/"
           VIM_EXTRA="$(printf '%s\n%s' "$PARSER_WORKER" "$WORKER_PATH")"
