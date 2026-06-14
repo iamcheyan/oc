@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { mkdirSync, writeFileSync, rmSync } from "fs"
-import { ConfigReference } from "@/config/reference"
-import { Reference } from "@/reference/reference"
+import { resolveAll, normalize } from "../src/session/reference-local"
 import { expandReferencePathMentions } from "@/session/reference-prompt-parts"
 
 describe("expandReferencePathMentions", () => {
@@ -14,8 +13,8 @@ describe("expandReferencePathMentions", () => {
     mkdirSync(refRoot, { recursive: true })
     writeFileSync(path.join(refRoot, "note.txt"), "hello")
 
-    const references = Reference.resolveAll({
-      references: ConfigReference.normalize({ docs: refRoot }),
+    const references = resolveAll({
+      references: normalize({ docs: refRoot }),
       directory: root,
       worktree: root,
     })
@@ -35,8 +34,8 @@ describe("expandReferencePathMentions", () => {
   })
 
   test("skips @alias without a subpath for server-side resolve", async () => {
-    const references = Reference.resolveAll({
-      references: ConfigReference.normalize({ docs: refRoot }),
+    const references = resolveAll({
+      references: normalize({ docs: refRoot }),
       directory: root,
       worktree: root,
     })

@@ -17,8 +17,7 @@ import { Locale } from "@/util/locale"
 import type { PromptInfo } from "@tui/prompt/history"
 import { useFrecency } from "@tui/prompt/frecency"
 import { useBindings, useCommandSlashes, useOpencodeModeStack } from "@tui/keymap"
-import { Reference } from "@/reference/reference"
-import { ConfigReference } from "@/config/reference"
+import { type Resolved, resolveAll, normalize } from "../session/reference-local"
 import { displayCharAt, mentionTriggerIndex } from "@tui/prompt/display"
 
 function removeLineRange(input: string) {
@@ -316,7 +315,7 @@ export function Autocomplete(props: {
     }
   }
 
-  function referencePromptText(reference: Reference.Resolved) {
+  function referencePromptText(reference: Resolved) {
     const problem = reference.kind === "invalid" ? reference.message : undefined
     return [
       `Referenced configured reference @${reference.name}.`,
@@ -335,8 +334,8 @@ export function Autocomplete(props: {
   }
 
   const references = createMemo(() =>
-    Reference.resolveAll({
-      references: ConfigReference.normalize(sync.data.config.reference ?? {}),
+    resolveAll({
+      references: normalize(sync.data.config.reference ?? {}),
       directory: sync.path.directory || process.cwd(),
       worktree: sync.path.worktree || sync.path.directory || process.cwd(),
     }),

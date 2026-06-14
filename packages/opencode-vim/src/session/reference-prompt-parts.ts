@@ -2,8 +2,7 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { ConfigMarkdown } from "@/config/markdown"
-import { Reference } from "@/reference/reference"
-import { referenceTextPart } from "@/session/prompt/reference"
+import { type Resolved, referenceTextPart } from "./reference-local"
 import { Filesystem } from "@/util/filesystem"
 
 export type ReferencePromptPartInput =
@@ -22,7 +21,7 @@ export type ReferencePromptPartInput =
 
 export async function expandReferencePathMentions(input: {
   text: string
-  references: Reference.Resolved[]
+  references: Resolved[]
 }): Promise<ReferencePromptPartInput[]> {
   const referenceByName = new Map(input.references.map((item) => [item.name, item]))
   const parts: ReferencePromptPartInput[] = []

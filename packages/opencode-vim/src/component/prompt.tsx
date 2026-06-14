@@ -40,8 +40,7 @@ import { read as readClipboard } from "@tui/clipboard"
 import type { AssistantMessage, FilePart, UserMessage } from "@opencode-ai/sdk/v2"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
-import { ConfigReference } from "@/config/reference"
-import { Reference } from "@/reference/reference"
+import { resolveAll, normalize } from "../session/reference-local"
 import { expandReferencePathMentions, mergeReferencePromptParts } from "@/session/reference-prompt-parts"
 import { formatDuration } from "@tui/util/format"
 import { createColors, createFrames } from "@tui/ui/spinner"
@@ -1328,8 +1327,8 @@ export function Prompt(props: PromptProps) {
     let nonTextParts = store.prompt.parts.filter((part) => part.type !== "text")
     const referenceParts = await expandReferencePathMentions({
       text: inputText,
-      references: Reference.resolveAll({
-        references: ConfigReference.normalize(sync.data.config.reference ?? {}),
+      references: resolveAll({
+        references: normalize(sync.data.config.reference ?? {}),
         directory: sync.path.directory || process.cwd(),
         worktree: sync.path.worktree || sync.path.directory || process.cwd(),
       }),

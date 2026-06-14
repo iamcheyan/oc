@@ -47,6 +47,7 @@ import { SessionStore } from "@opencode-ai/core/session/store"
 import { SystemContext } from "@opencode-ai/core/system-context"
 import { SystemContextRegistry } from "@opencode-ai/core/system-context/registry"
 import { SkillGuidance } from "@opencode-ai/core/skill/guidance"
+import { ReferenceGuidance } from "@opencode-ai/core/reference/guidance"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Location } from "@opencode-ai/core/location"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -214,6 +215,7 @@ const skillGuidance = Layer.mock(SkillGuidance.Service, {
         : SystemContext.empty,
     ),
 })
+const referenceGuidance = Layer.mock(ReferenceGuidance.Service, { load: () => Effect.succeed(SystemContext.empty) })
 const config = Layer.succeed(
   Config.Service,
   Config.Service.of({
@@ -242,6 +244,7 @@ const runner = SessionRunnerLLM.layer.pipe(
   Layer.provide(location),
   Layer.provide(agents),
   Layer.provide(skillGuidance),
+  Layer.provide(referenceGuidance),
   Layer.provide(config),
 )
 const coordinator = SessionRunCoordinator.layer.pipe(Layer.provide(runner))
@@ -1661,7 +1664,7 @@ describe("SessionRunnerLLM", () => {
             type: "content",
             value: [
               { type: "text", text: "Hello" },
-              { type: "media", mediaType: "image/png", data: "data:image/png;base64,aGVsbG8=", filename: "hello.png" },
+              { type: "file", uri: "data:image/png;base64,aGVsbG8=", mime: "image/png", name: "hello.png" },
             ],
           },
           providerExecuted: true,
@@ -1714,7 +1717,7 @@ describe("SessionRunnerLLM", () => {
                 structured: {},
                 content: [
                   { type: "text", text: "Hello" },
-                  { type: "file", mime: "image/png", source: { type: "data", data: "aGVsbG8=" }, name: "hello.png" },
+                  { type: "file", mime: "image/png", uri: "data:image/png;base64,aGVsbG8=", name: "hello.png" },
                 ],
               },
             },
