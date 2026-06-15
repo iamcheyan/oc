@@ -1,0 +1,4 @@
+# One path per line (relative to repo root). Only these files may contain fork seams
+# in packages/opencode/src or packages/tui/src. Checked by fork/check-upstream-seams.sh.
+packages/tui/src/app.tsx
+packages/opencode/src/session/processor.ts
