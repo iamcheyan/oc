@@ -24,6 +24,7 @@
   "workspaces": {
     "packages": [
       "packages/*",
+      "packages/miniapps/*",
       "packages/console/*",
       "packages/stats/*",
       "packages/sdk/js",
