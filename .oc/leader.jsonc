@@ -1,0 +1,59 @@
+{
+  // Custom leader menu entries
+  // Only items NOT already in the default opencode leader menu go here.
+  // Default groups: space(quick), a(agent), m(model), s(session), g(git),
+  //   w(workspace), u(ui), p(prompt), x(system), q(quit)
+  //
+  // Action types:
+  //   "tui"     - Launch a TUI tool that takes over the terminal (use "command" field)
+  //   "command" - Dispatch an opencode internal command (use "command" field)
+  //   "shell"   - Run a shell command (use "command" field)
+  //   "skill"   - Install skill if needed, then trigger it (use "skill" field)
+  //   "quit"    - Quit opencode
+  //   "clear"   - Clear the screen
+  //
+  // "require": binary name that must exist in PATH for this item to show
+  // "skill": skill name to install and trigger (for "skill" action)
+  //
+  "leader": {
+    "groups": [
+      {
+        "key": "f",
+        "label": "files",
+        "icon": "󰉋",
+        "items": [
+          { "key": "f", "label": "ff (find file)", "icon": "󰈞", "action": "tui", "command": "ff", "require": "fff" },
+          { "key": "r", "label": "rf (rg search)", "icon": "󰈐", "action": "tui", "command": "rf", "require": "rf" },
+          { "key": "y", "label": "yazi (file mgr)", "icon": "󰉋", "action": "tui", "command": "yazi", "require": "yazi" },
+          { "key": "e", "label": "nvim (editor)", "icon": "󰘳", "action": "tui", "command": "nvim", "args": ["."], "require": "nvim" }
+        ]
+      },
+      {
+        "key": "g",
+        "label": "git",
+        "icon": "󰊢",
+        "items": [
+          { "key": "g", "label": "lazygit", "icon": "󰊢", "action": "lazygit", "require": "lazygit" },
+          { "key": "c", "label": "smart commit", "icon": "󰊢", "action": "skill", "skill": "git-master" }
+        ]
+      },
+      {
+        "key": "v",
+        "label": "vim",
+        "icon": "",
+        "items": [
+          { "key": "v", "label": "open lazyvim", "icon": "", "action": "lazyvim", "require": "nvim" }
+        ]
+      },
+      {
+        "key": "t",
+        "label": "tools",
+        "icon": "󰙨",
+        "items": [
+          { "key": "b", "label": "btop (monitor)", "icon": "󰔎", "action": "tui", "command": "btop", "require": "btop" },
+          { "key": "t", "label": "tldr (man page)", "icon": "󰘳", "action": "tui", "command": "tldr", "require": "tldr" }
+        ]
+      }
+    ]
+  }
+}
