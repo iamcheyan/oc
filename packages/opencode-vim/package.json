@@ -1,0 +1,32 @@
+{
+  "name": "@opencode-ai/vim",
+  "version": "1.0.0",
+  "description": "OpenCode Vim TUI - LazyVim-inspired fork-owned frontend",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "demo:subagent": "bun run ./src/subagent-demo.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentui/core": "catalog:",
+    "@opentui/keymap": "catalog:",
+    "@opentui/solid": "catalog:",
+    "@opencode-ai/api-test": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
+    "@opencode-ai/sdk": "workspace:*",
+    "bedrock-scanner": "workspace:*",
+    "fuzzysort": "catalog:",
+    "opentui-spinner": "catalog:",
+    "remeda": "catalog:",
+    "solid-js": "catalog:",
+    "yargs": "18.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/yargs": "17.0.33",
+    "typescript": "catalog:"
+  }
+}
