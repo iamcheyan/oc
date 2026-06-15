@@ -39,6 +39,7 @@
     "packages": [
       "packages/*",
       "packages/plugins/*",
+      "packages/miniapps/*",
       "services/*",
       "packages/console/*",
       "packages/stats/*"
