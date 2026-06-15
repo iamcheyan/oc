@@ -7,7 +7,7 @@
   "scripts": {
     "demo:subagent": "bun run ./src/subagent-demo.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@opentui/core": "catalog:",
