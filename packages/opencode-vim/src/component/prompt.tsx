@@ -40,9 +40,6 @@ import { read as readClipboard } from "@tui/clipboard"
 import type { AssistantMessage, FilePart, UserMessage } from "@opencode-ai/sdk/v2"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
-import { ConfigReference } from "@/config/reference"
-import { Reference } from "@/reference/reference"
-import { expandReferencePathMentions, mergeReferencePromptParts } from "@/session/reference-prompt-parts"
 import { formatDuration } from "@tui/util/format"
 import { createColors, createFrames } from "@tui/ui/spinner"
 import { useDialog } from "@tui/ui/dialog"
@@ -1325,16 +1322,7 @@ export function Prompt(props: PromptProps) {
     }
 
     // Filter out text parts (pasted content) since they're now expanded inline
-    let nonTextParts = store.prompt.parts.filter((part) => part.type !== "text")
-    const referenceParts = await expandReferencePathMentions({
-      text: inputText,
-      references: Reference.resolveAll({
-        references: ConfigReference.normalize(sync.data.config.reference ?? {}),
-        directory: sync.path.directory || process.cwd(),
-        worktree: sync.path.worktree || sync.path.directory || process.cwd(),
-      }),
-    })
-    nonTextParts = mergeReferencePromptParts(nonTextParts, referenceParts)
+    const nonTextParts = store.prompt.parts.filter((part) => part.type !== "text")
 
     // Capture mode before it gets reset
     const currentMode = store.mode
