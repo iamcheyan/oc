@@ -13,11 +13,6 @@ import { useThinkingMode } from "@tui/context/thinking"
 import { Prompt, type PromptRef } from "@/component/prompt"
 import type { LeaderGroup } from "@/feature/leader-menu"
 
-const money = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-})
-
 export function MinimalStatusBar(props: { sessionID?: string }) {
   const local = useLocal()
   const directory = useDirectory()
@@ -28,28 +23,6 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
   const status = createMemo(() => {
     if (!props.sessionID) return { type: "idle" }
     return sync.data.session_status?.[props.sessionID] ?? { type: "idle" }
-  })
-
-  const usage = createMemo(() => {
-    if (!props.sessionID) return
-    const session = sync.session.get(props.sessionID)
-    const messages = sync.data.message[props.sessionID] ?? []
-    const last = messages.findLast(
-      (item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0,
-    )
-    if (!last) return
-
-    const tokens =
-      last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
-    if (tokens <= 0) return
-
-    const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
-    const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    const cost = session?.cost ?? 0
-    return {
-      context: pct ? `${Locale.number(tokens)} (${pct})` : Locale.number(tokens),
-      cost: cost > 0 ? money.format(cost) : undefined,
-    }
   })
 
   const agentLabel = createMemo(() =>
@@ -98,18 +71,6 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
             <span style={{ fg: theme.text }}>
               {props.sessionID ? value().modelID : `${local.model.current()!.providerID}/${local.model.current()!.modelID}`}
             </span>
-            <Show when={props.sessionID && status().type !== "idle"}>
-              <span style={{ fg: theme.textMuted }}>
-                {" · Thinking"}
-              </span>
-              <Show when={usage()}>
-                {(item) => (
-                  <span style={{ fg: theme.textMuted }}>
-                    {" · "}{[item().context, item().cost].filter(Boolean).join(" · ")}
-                  </span>
-                )}
-              </Show>
-            </Show>
           </text>
         )}
       </Show>

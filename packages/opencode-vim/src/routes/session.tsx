@@ -98,6 +98,11 @@ interface AnsiSegment {
   underline?: boolean
 }
 
+const money = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+})
+
 function parseAnsiText(text: string): AnsiSegment[] {
   const segments: AnsiSegment[] = []
   const ansiRegex = /\x1b\[([0-9;]*)m/g
@@ -304,6 +309,26 @@ function CompactAssistantMessage(props: {
   const model = createMemo(() =>
     Model.name(ctx.providers(), props.message.providerID, props.message.modelID),
   )
+  const status = createMemo(() => sync.data.session_status?.[props.message.sessionID] ?? { type: "idle" as const })
+  const usage = createMemo(() => {
+    const session = sync.session.get(props.message.sessionID)
+    const last = messages().findLast(
+      (item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0,
+    )
+    if (!last) return
+
+    const tokens =
+      last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
+    if (tokens <= 0) return
+
+    const modelInfo = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
+    const pct = modelInfo?.limit.context ? `${Math.round((tokens / modelInfo.limit.context) * 100)}%` : undefined
+    const cost = session?.cost ?? 0
+    return {
+      context: pct ? `${Locale.number(tokens)} (${pct})` : Locale.number(tokens),
+      cost: cost > 0 ? money.format(cost) : undefined,
+    }
+  })
 
   return (
     <box>
@@ -341,6 +366,12 @@ function CompactAssistantMessage(props: {
         <text fg={theme.textMuted}>
           <span style={{ fg: local.agent.color(props.message.agent) }}>✔ </span>
           {Locale.titlecase(props.message.mode)} · {model()}
+          <Show when={props.last && status().type !== "idle"}>
+            {" "}· Thinking
+            <Show when={usage()}>
+              {(item) => <> · {[item().context, item().cost].filter(Boolean).join(" · ")}</>}
+            </Show>
+          </Show>
           <Show when={duration()}> · {Locale.duration(duration())}</Show>
           <Show when={props.message.error?.name === "MessageAbortedError"}>
             {" "}· interrupted
