@@ -317,6 +317,15 @@ function CompactAssistantMessage(props: {
     Model.name(ctx.providers(), props.message.providerID, props.message.modelID),
   )
   const status = createMemo(() => sync.data.session_status?.[props.message.sessionID] ?? { type: "idle" as const })
+  const [activityFrame, setActivityFrame] = createSignal(0)
+  createEffect(() => {
+    if (!props.last || status().type === "idle") {
+      setActivityFrame(0)
+      return
+    }
+    const timer = setInterval(() => setActivityFrame((i) => (i + 1) % 2), 500)
+    onCleanup(() => clearInterval(timer))
+  })
   const usage = createMemo(() => {
     const session = sync.session.get(props.message.sessionID)
     const last = messages().findLast(
@@ -374,7 +383,7 @@ function CompactAssistantMessage(props: {
           <span style={{ fg: local.agent.color(props.message.agent) }}>✔ </span>
           {Locale.titlecase(props.message.mode)} · {model()}
           <Show when={props.last && status().type !== "idle"}>
-            {" "}· Thinking
+            {" "}· <span style={{ fg: local.agent.color(props.message.agent) }}>{activityFrame() === 0 ? "●" : "○"}</span>{" "}Thinking
             <Show when={usage()}>
               {(item) => <> · {[item().context, item().cost].filter(Boolean).join(" · ")}</>}
             </Show>
