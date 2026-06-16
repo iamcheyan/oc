@@ -21,6 +21,8 @@ Fork-owned paths include:
 - `packages/miniapps/**`
 - `packages/bedrock-scanner/**`
 - `.oc/**`
+- `.gitignore`
+- `.opencode/.gitignore`
 - `README.md`
 - `.github/workflows/fork-build.yml`
 - the fork workspace entries in `package.json` and `bun.lock`
