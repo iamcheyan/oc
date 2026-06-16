@@ -1431,7 +1431,6 @@ export function Prompt(props: PromptProps) {
       }, 50)
     }
     input.clear()
-    vimMode.enterNormal()
     return true
   }
   function pasteText(text: string, virtualText: string) {
