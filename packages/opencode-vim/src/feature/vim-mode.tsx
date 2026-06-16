@@ -899,6 +899,16 @@ export function useVimSession(
     }, 0)
   }
 
+  const submitDraftOrFocusPrompt = () => {
+    const prompt = promptRef()
+    if (prompt && (prompt.current.input !== "" || prompt.current.parts.length > 0)) {
+      prompt.submit()
+      return true
+    }
+    focusPrompt()
+    return true
+  }
+
   createEffect(() => {
     const normal = isNormal()
     
@@ -1307,12 +1317,12 @@ export function useVimSession(
       {
         key: "return",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => focusPrompt(),
+        cmd: () => submitDraftOrFocusPrompt(),
       },
       {
         key: "enter",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => focusPrompt(),
+        cmd: () => submitDraftOrFocusPrompt(),
       },
       {
         key: "escape",
@@ -1385,6 +1395,16 @@ export function useVimHome(
       prompt.focus()
       if (text) prompt.insert(text)
     }, 0)
+  }
+
+  const submitDraftOrFocusPrompt = () => {
+    const prompt = promptRef()
+    if (prompt && (prompt.current.input !== "" || prompt.current.parts.length > 0)) {
+      prompt.submit()
+      return true
+    }
+    focusPrompt()
+    return true
   }
 
   createEffect(() => {
@@ -1650,12 +1670,12 @@ export function useVimHome(
       {
         key: "return",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => focusPrompt(),
+        cmd: () => submitDraftOrFocusPrompt(),
       },
       {
         key: "enter",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => focusPrompt(),
+        cmd: () => submitDraftOrFocusPrompt(),
       },
       {
         key: "escape",
