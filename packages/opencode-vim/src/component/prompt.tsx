@@ -1804,30 +1804,6 @@ export function Prompt(props: PromptProps) {
                 </box>
               </box>
             </Show>
-            <Show when={props.compact && status().type !== "idle"}>
-              <box width="100%" flexDirection="row" justifyContent="space-between">
-                <box flexShrink={0} flexDirection="row" gap={1}>
-                  <text fg={activityColor()}>{activityDot()}</text>
-                  <text fg={theme.textMuted}>Thinking</text>
-                  <Show when={usage()}>
-                    {(item) => (
-                      <>
-                        <text fg={theme.textMuted}>·</text>
-                        <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-                          {[item().context, item().cost].filter(Boolean).join(" · ")}
-                        </text>
-                      </>
-                    )}
-                  </Show>
-                </box>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
-                  esc{" "}
-                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
-                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
-                  </span>
-                </text>
-              </box>
-            </Show>
             <box visible={!vimMode.isNormal() || isLeaderActive() || !vimHidePrompt()} flexDirection="row" alignItems="flex-start" backgroundColor={"#2a2a2a"} width="100%">
               <textarea
                 placeholder={props.compact ? undefined : placeholderText()}

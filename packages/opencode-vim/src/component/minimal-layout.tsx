@@ -98,6 +98,18 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
             <span style={{ fg: theme.text }}>
               {props.sessionID ? value().modelID : `${local.model.current()!.providerID}/${local.model.current()!.modelID}`}
             </span>
+            <Show when={props.sessionID && status().type !== "idle"}>
+              <span style={{ fg: theme.textMuted }}>
+                {" · Thinking"}
+              </span>
+              <Show when={usage()}>
+                {(item) => (
+                  <span style={{ fg: theme.textMuted }}>
+                    {" · "}{[item().context, item().cost].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </Show>
+            </Show>
           </text>
         )}
       </Show>
