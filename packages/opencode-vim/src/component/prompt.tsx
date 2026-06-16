@@ -1807,10 +1807,18 @@ export function Prompt(props: PromptProps) {
             <Show when={props.compact && status().type !== "idle"}>
               <box width="100%" flexDirection="row" justifyContent="space-between">
                 <box flexShrink={0} flexDirection="row" gap={1}>
-                  <box marginLeft={1}>
-                    <text fg={activityColor()}>{activityDot()}</text>
-                  </box>
+                  <text fg={activityColor()}>{activityDot()}</text>
                   <text fg={theme.textMuted}>Thinking</text>
+                  <Show when={usage()}>
+                    {(item) => (
+                      <>
+                        <text fg={theme.textMuted}>·</text>
+                        <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
+                          {[item().context, item().cost].filter(Boolean).join(" · ")}
+                        </text>
+                      </>
+                    )}
+                  </Show>
                 </box>
                 <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
                   esc{" "}

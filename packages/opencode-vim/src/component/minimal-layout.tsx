@@ -59,15 +59,6 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
   const modeBackground = createMemo(() => (modeIsNormal() ? theme.success : theme.primary))
   const modeForeground = createMemo(() => (modeIsNormal() ? RGBA.fromInts(0, 0, 0) : selectedForeground(theme, theme.primary)))
 
-  const sessionRightStatus = createMemo(() => {
-    const parts: string[] = []
-    const usageValue = usage()
-    if (usageValue) {
-      parts.push([usageValue.context, usageValue.cost].filter(Boolean).join(" · "))
-    }
-    return parts.join(" · ")
-  })
-
   return (
     <box flexShrink={0} width="100%" flexDirection="row" justifyContent="space-between">
       <box flexDirection="row" gap={1} minWidth={0}>
@@ -85,15 +76,13 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
         </text>
       </box>
       <Show
-        when={props.sessionID ? sessionRightStatus() : local.model.current()}
+        when={local.model.current()}
         fallback={
-          props.sessionID ? undefined : (
-            <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-              <span style={{ fg: local.agent.current() ? local.agent.color(local.agent.current()!.name) : theme.textMuted }}>
-                {agentLabel()}
-              </span>
-            </text>
-          )
+          <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
+            <span style={{ fg: local.agent.current() ? local.agent.color(local.agent.current()!.name) : theme.textMuted }}>
+              {agentLabel()}
+            </span>
+          </text>
         }
       >
         {(value) => (
@@ -105,9 +94,9 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
             <span style={{ fg: local.agent.current() ? local.agent.color(local.agent.current()!.name) : theme.textMuted }}>
               {agentLabel()}
             </span>
-            <span style={{ fg: theme.textMuted }}> {props.sessionID ? "" : "· "}</span>
-            <span style={{ fg: props.sessionID ? theme.textMuted : theme.text }}>
-              {props.sessionID ? value() : `${local.model.current()!.providerID}/${local.model.current()!.modelID}`}
+            <span style={{ fg: theme.textMuted }}> · </span>
+            <span style={{ fg: theme.text }}>
+              {props.sessionID ? value().modelID : `${local.model.current()!.providerID}/${local.model.current()!.modelID}`}
             </span>
           </text>
         )}
