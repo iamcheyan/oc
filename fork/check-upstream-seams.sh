@@ -44,7 +44,7 @@ is_fork_owned() {
     fork/* | packages/opencode-vim/* | packages/miniapps/* | packages/bedrock-scanner/* | .oc/*)
       return 0
       ;;
-    README.md | package.json | bun.lock | .github/workflows/fork-build.yml)
+    README.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml)
       return 0
       ;;
   esac
