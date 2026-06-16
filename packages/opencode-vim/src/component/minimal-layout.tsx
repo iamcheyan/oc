@@ -1,11 +1,10 @@
-import { createEffect, createMemo, createSignal, Show } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import type { JSX } from "@opentui/solid"
 import { usePluginRuntime } from "@tui/plugin/runtime"
 import { useDirectory } from "@tui/context/directory"
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
 import { selectedForeground, useForkTheme } from "@/util/theme"
-import { SPINNER_FRAMES } from "@tui/component/spinner"
 import { TextAttributes, RGBA } from "@opentui/core"
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import { Locale } from "@/util/locale"
@@ -26,19 +25,9 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
   const { theme } = useForkTheme()
   const vimMode = useVimMode()
   const thinking = useThinkingMode()
-  const [spinnerFrame, setSpinnerFrame] = createSignal(0)
   const status = createMemo(() => {
     if (!props.sessionID) return { type: "idle" }
     return sync.data.session_status?.[props.sessionID] ?? { type: "idle" }
-  })
-
-  createEffect(() => {
-    if (status().type === "idle") {
-      setSpinnerFrame(0)
-      return
-    }
-    const timer = setInterval(() => setSpinnerFrame((i) => (i + 1) % SPINNER_FRAMES.length), 80)
-    return () => clearInterval(timer)
   })
 
   const usage = createMemo(() => {
@@ -72,9 +61,6 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
 
   const sessionRightStatus = createMemo(() => {
     const parts: string[] = []
-    if (status().type !== "idle") {
-      parts.push(`${SPINNER_FRAMES[spinnerFrame()]} Thinking`)
-    }
     const usageValue = usage()
     if (usageValue) {
       parts.push([usageValue.context, usageValue.cost].filter(Boolean).join(" · "))
