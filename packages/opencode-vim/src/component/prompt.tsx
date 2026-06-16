@@ -11,14 +11,13 @@ import {
 } from "@opentui/core"
 import type { CommandContext } from "@opentui/keymap"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match, For } from "solid-js"
-import "opentui-spinner/solid"
 import path from "path"
 import { fileURLToPath } from "url"
 import { Filesystem } from "@/util/filesystem"
 import { useLocal } from "@tui/context/local"
 import { tint, useForkTheme } from "@/util/theme"
 import { EmptyBorder, SplitBorder } from "@tui/ui/border"
-import { Spinner, SPINNER_FRAMES } from "@tui/component/spinner"
+import { Spinner } from "@tui/component/spinner"
 import { useSDK } from "@tui/context/sdk"
 import { useRoute } from "@tui/context/route"
 import { useProject } from "@tui/context/project"
@@ -41,7 +40,6 @@ import type { AssistantMessage, FilePart, UserMessage } from "@opencode-ai/sdk/v
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
 import { formatDuration } from "@tui/util/format"
-import { createColors, createFrames } from "@tui/ui/spinner"
 import { useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderConnect } from "@tui/component/dialog-provider"
 import { DialogAlert } from "@tui/ui/dialog-alert"
@@ -266,13 +264,13 @@ export function Prompt(props: PromptProps) {
   const dialog = useDialog()
   const toast = useToast()
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
-  const [spinnerFrame, setSpinnerFrame] = createSignal(0)
+  const [activityFrame, setActivityFrame] = createSignal(0)
   createEffect(() => {
     if (status().type === "idle") {
-      setSpinnerFrame(0)
+      setActivityFrame(0)
       return
     }
-    const timer = setInterval(() => setSpinnerFrame((i) => (i + 1) % SPINNER_FRAMES.length), 80)
+    const timer = setInterval(() => setActivityFrame((i) => (i + 1) % 2), 500)
     onCleanup(() => clearInterval(timer))
   })
   const history = usePromptHistory()
@@ -1648,28 +1646,16 @@ export function Prompt(props: PromptProps) {
     }
   })
 
-  const spinnerDef = createMemo(() => {
+  const activityColor = createMemo(() => {
     const agent =
       status().type !== "idle"
         ? (local.agent.list().find((a) => a.name === lastUserMessage()?.agent) ?? local.agent.current())
         : local.agent.current()
-    const color = agent ? local.agent.color(agent.name) : theme.border
-    return {
-      frames: createFrames({
-        color,
-        style: "blocks",
-        inactiveFactor: 0.6,
-        // enableFading: false,
-        minAlpha: 0.3,
-      }),
-      color: createColors({
-        color,
-        style: "blocks",
-        inactiveFactor: 0.6,
-        // enableFading: false,
-        minAlpha: 0.3,
-      }),
-    }
+    return agent ? local.agent.color(agent.name) : theme.border
+  })
+  const activityDot = createMemo(() => {
+    if (!kv.get("animations_enabled", true)) return "●"
+    return activityFrame() === 0 ? "●" : "○"
   })
 
   return (
@@ -1734,10 +1720,6 @@ export function Prompt(props: PromptProps) {
                             <Show when={usage()}>
                               {(item) => (
                                 <>
-                                  <Show when={status().type !== "idle"}>
-                                    <text fg={theme.textMuted}>·</text>
-                                    <text fg={theme.textMuted}>{SPINNER_FRAMES[spinnerFrame()]} Thinking</text>
-                                  </Show>
                                   <text fg={theme.textMuted}>·</text>
                                   <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
                                     {[item().context, item().cost].filter(Boolean).join(" · ")}
@@ -1820,6 +1802,22 @@ export function Prompt(props: PromptProps) {
                     {leaderActiveGroup() ? "esc close" : "space leader"}
                   </text>
                 </box>
+              </box>
+            </Show>
+            <Show when={props.compact && status().type !== "idle"}>
+              <box width="100%" flexDirection="row" justifyContent="space-between">
+                <box flexShrink={0} flexDirection="row" gap={1}>
+                  <box marginLeft={1}>
+                    <text fg={activityColor()}>{activityDot()}</text>
+                  </box>
+                  <text fg={theme.textMuted}>Thinking</text>
+                </box>
+                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
+                  esc{" "}
+                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
+                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
+                  </span>
+                </text>
               </box>
             </Show>
             <box visible={!vimMode.isNormal() || isLeaderActive() || !vimHidePrompt()} flexDirection="row" alignItems="flex-start" backgroundColor={"#2a2a2a"} width="100%">
@@ -1945,11 +1943,10 @@ export function Prompt(props: PromptProps) {
               >
                 <box flexShrink={0} flexDirection="row" gap={1}>
                   <box marginLeft={1}>
-                    <Show when={kv.get("animations_enabled", true)} fallback={<text fg={theme.textMuted}>[⋯]</text>}>
-                      <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
-                    </Show>
+                    <text fg={activityColor()}>{activityDot()}</text>
                   </box>
                   <box flexDirection="row" gap={1} flexShrink={0}>
+                    <text fg={theme.textMuted}>Thinking</text>
                     {(() => {
                       const retry = createMemo(() => {
                         const s = status()
@@ -2086,7 +2083,7 @@ export function Prompt(props: PromptProps) {
               </Switch>
             </box>
           </Show>
-        </box>
+          </box>
         </Show>
       </box>
     </>
