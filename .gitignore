@@ -7,6 +7,10 @@ node_modules
 .idea
 .vscode
 .codex
+.antigravitycli/
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
 *~
 playground
 tmp
