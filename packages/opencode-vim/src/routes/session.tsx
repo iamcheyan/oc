@@ -246,17 +246,21 @@ function CompactUserMessage(props: {
 
 
 function CompactTextPart(props: { part: Part & { type: "text" } }) {
+  const ctx = useSession()
   const { theme, syntax } = useForkTheme()
   const content = createMemo(() => props.part.text?.trim() ?? "")
   return (
     <Show when={content()}>
-      <box id={`text-${props.part.id}`}>
+      <box id={`text-${props.part.id}`} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
+          internalBlockMode="top-level"
           content={content()}
           tableOptions={{ style: "grid" }}
-          fg={theme.text}
+          conceal={ctx.conceal()}
+          fg={theme.markdownText}
+          bg={theme.background}
         />
       </box>
     </Show>
@@ -270,13 +274,16 @@ function CompactReasoningPart(props: { part: Part & { type: "reasoning" } }) {
   const showThinking = createMemo(() => ctx.thinkingMode() === "show")
   return (
     <Show when={content() && showThinking()}>
-      <box id={`text-${props.part.id}`}>
+      <box id={`text-${props.part.id}`} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
+          internalBlockMode="top-level"
           content={content()}
           tableOptions={{ style: "grid" }}
-          fg={theme.text}
+          conceal={ctx.conceal()}
+          fg={theme.markdownText}
+          bg={theme.background}
         />
       </box>
     </Show>
