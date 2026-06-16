@@ -39,6 +39,7 @@ origin/main:                  F1'---F2'---F3'
 - OC 主体位于 `packages/opencode-vim/**`、`packages/miniapps/**`、
   `packages/bedrock-scanner/**` 和 `.oc/**`。
 - 根 `package.json` 与 `bun.lock` 只承担 fork workspace 接入。
+- `.gitignore` 与 `.opencode/.gitignore` 只承担 fork 本地开发产物过滤。
 - 上游源码只保留两个带 `FORK-SEAM (opencode-vim)` 标记的文件。
 - `fork/**` 只保存构建、同步、边界检查和维护文档，不保存上游源码镜像。
 
