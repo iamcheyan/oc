@@ -294,6 +294,7 @@ function CompactAssistantMessage(props: {
   message: AssistantMessage
   parts: Part[]
   last: boolean
+  pureMode?: boolean
 }) {
   const ctx = useSession()
   const local = useLocal()
@@ -380,15 +381,17 @@ function CompactAssistantMessage(props: {
         }
       >
         <text fg={theme.textMuted}>
-          <span style={{ fg: local.agent.color(props.message.agent) }}>✔ </span>
-          {Locale.titlecase(props.message.mode)} · {model()}
+          <Show when={!props.pureMode}>
+            <span style={{ fg: local.agent.color(props.message.agent) }}>✔ </span>
+            {Locale.titlecase(props.message.mode)} · {model()}
+          </Show>
           <Show when={props.last && status().type !== "idle"}>
             {" "}· <span style={{ fg: local.agent.color(props.message.agent) }}>{activityFrame() === 0 ? "●" : "○"}</span>{" "}Thinking
             <Show when={usage()}>
               {(item) => <> · {[item().context, item().cost].filter(Boolean).join(" · ")}</>}
             </Show>
           </Show>
-          <Show when={duration()}> · {Locale.duration(duration())}</Show>
+          <Show when={duration() && !props.pureMode}> · {Locale.duration(duration())}</Show>
           <Show when={props.message.error?.name === "MessageAbortedError"}>
             {" "}· interrupted
           </Show>
@@ -418,6 +421,7 @@ export function MinimalSession() {
   const setEpilogue = useEpilogue()
   const directory = useDirectory()
   const leaderMenu = createMemo(() => getLeaderMenu(directory()))
+  const pureMode = createMemo(() => kv.get("minimal_pure_mode") ?? false)
 
   const session = createMemo(() => sync.session.get(route.sessionID))
   const children = createMemo(() => {
@@ -730,7 +734,7 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
         <SessionContext.Provider value={contextValue}>
           <box flexDirection="column" flexGrow={1} minHeight={0} position="relative">
             <Show when={route.sessionID}>
-              <MinimalStatusBar sessionID={route.sessionID} />
+              <MinimalStatusBar sessionID={route.sessionID} pureMode={pureMode()} />
               <box flexGrow={1} minHeight={0}>
                 <box flexGrow={1} minHeight={0}>
                   <scrollbox
@@ -756,6 +760,7 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
                                last={lastAssistant()?.id === message.id}
                                message={message as AssistantMessage}
                                parts={sync.data.part[message.id] ?? []}
+                               pureMode={pureMode()}
                             />
                           </Match>
                         </Switch>
