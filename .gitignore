@@ -38,6 +38,5 @@ logs/
 tsconfig.tsbuildinfo
 
 # Fork local dev
-packages/opencode-repl/
 screen/
 test/
