@@ -1,5 +1,5 @@
 import type { MinimalPromptRef, PromptRef } from "@/component/prompt"
-import { createEffect, createMemo, createSignal, onMount } from "solid-js"
+import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
 import { useSync } from "@tui/context/sync"
 import { Toast, useToast } from "@tui/ui/toast"
 import { useArgs } from "@tui/context/args"
@@ -45,6 +45,7 @@ export function MinimalHome() {
   const vimConfig = createMemo(() => loadVimConfig(directory()))
   const vimHidePrompt = createMemo(() => kv.get("minimal_vim_hide_prompt") ?? vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => kv.get("minimal_vim_auto_resume") ?? vimConfig().autoResume ?? false)
+  const pureMode = createMemo(() => kv.get("minimal_pure_mode") ?? false)
   let sent = false
 
   onMount(() => {
@@ -147,6 +148,21 @@ export function MinimalHome() {
           dialog.clear()
         },
       },
+      {
+        name: "vim.toggle.pureMode",
+        title: "Toggle pure mode",
+        category: "Vim",
+        run: () => {
+          const next = !pureMode()
+          kv.set("minimal_pure_mode", next)
+          toast.show({
+            message: `Pure mode: ${next ? "ON" : "OFF"}`,
+            variant: "info",
+            duration: 2000,
+          })
+          dialog.clear()
+        },
+      },
     ],
   }))
 
@@ -173,9 +189,10 @@ export function MinimalHome() {
     <AutocompleteHostProvider>
       <MinimalRendererBackground />
       <box flexGrow={1} minHeight={0} flexDirection="column">
-        <MinimalStatusBar />
+        <MinimalStatusBar pureMode={pureMode()} />
         <box flexGrow={1} minHeight={0} flexDirection="column" justifyContent="center" alignItems="center">
-          <text fg={theme.primary}>{`
+          <Show when={!pureMode()}>
+            <text fg={theme.primary}>{`
  ██████╗  ██████╗    ██╗   ██╗██╗███╗   ███╗
 ██╔═══██╗██╔════╝    ██║   ██║██║████╗ ████║
 ██║   ██║██║         ██║   ██║██║██╔████╔██║
@@ -183,7 +200,8 @@ export function MinimalHome() {
 ╚██████╔╝╚██████╗     ╚████╔╝ ██║██║ ╚═╝ ██║
  ╚═════╝  ╚═════╝      ╚═══╝  ╚═╝╚═╝     ╚═╝
 `}</text>
-          <text fg={theme.textMuted} marginTop={1}>opencode-vim · Powered by opencode</text>
+            <text fg={theme.textMuted} marginTop={1}>opencode-vim · Powered by opencode</text>
+          </Show>
         </box>
         <MinimalHomePromptFooter bind={bind} placeholders={placeholder} />
         <Toast />
