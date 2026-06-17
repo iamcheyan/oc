@@ -13,7 +13,7 @@ import { useThinkingMode } from "@tui/context/thinking"
 import { Prompt, type PromptRef } from "@/component/prompt"
 import type { LeaderGroup } from "@/feature/leader-menu"
 
-export function MinimalStatusBar(props: { sessionID?: string }) {
+export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean }) {
   const local = useLocal()
   const directory = useDirectory()
   const sync = useSync()
@@ -67,10 +67,12 @@ export function MinimalStatusBar(props: { sessionID?: string }) {
             <span style={{ fg: local.agent.current() ? local.agent.color(local.agent.current()!.name) : theme.textMuted }}>
               {agentLabel()}
             </span>
-            <span style={{ fg: theme.textMuted }}> · </span>
-            <span style={{ fg: theme.text }}>
-              {props.sessionID ? value().modelID : `${local.model.current()!.providerID}/${local.model.current()!.modelID}`}
-            </span>
+            <Show when={!props.pureMode}>
+              <span style={{ fg: theme.textMuted }}> · </span>
+              <span style={{ fg: theme.text }}>
+                {props.sessionID ? value().modelID : `${local.model.current()!.providerID}/${local.model.current()!.modelID}`}
+              </span>
+            </Show>
           </text>
         )}
       </Show>
