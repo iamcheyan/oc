@@ -295,12 +295,16 @@ function CompactAssistantMessage(props: {
   parts: Part[]
   last: boolean
   pureMode?: boolean
+  hideTools?: boolean
 }) {
   const ctx = useSession()
   const local = useLocal()
   const { theme } = useForkTheme()
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
+
+  const isWriteTool = (toolName: string) =>
+    ["write", "editor_write", "edit", "apply_patch", "todowrite"].includes(toolName)
 
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
@@ -358,7 +362,7 @@ function CompactAssistantMessage(props: {
             <Match when={part.type === "reasoning"}>
               <CompactReasoningPart part={part as any} />
             </Match>
-            <Match when={part.type === "tool"}>
+            <Match when={part.type === "tool" && (!props.hideTools || isWriteTool((part as any).tool))}>
               <box id={`tool-${(part as any).id}`}>
                 <SimpleTool part={part as any} />
               </box>
@@ -388,7 +392,7 @@ function CompactAssistantMessage(props: {
           <Show when={props.last && status().type !== "idle"}>
             <Show when={!props.pureMode}>{" "}· </Show>
             <span style={{ fg: local.agent.color(props.message.agent) }}>{activityFrame() === 0 ? "●" : "○"}</span>{" "}Thinking
-            <Show when={usage() && !props.pureMode}>
+            <Show when={!props.pureMode && usage()}>
               {(item) => <> · {[item().context, item().cost].filter(Boolean).join(" · ")}</>}
             </Show>
           </Show>
@@ -423,6 +427,7 @@ export function MinimalSession() {
   const directory = useDirectory()
   const leaderMenu = createMemo(() => getLeaderMenu(directory()))
   const pureMode = createMemo(() => kv.get("minimal_pure_mode") ?? false)
+  const hideTools = createMemo(() => kv.get("minimal_hide_tools") ?? false)
 
   const session = createMemo(() => sync.session.get(route.sessionID))
   const children = createMemo(() => {
@@ -636,6 +641,21 @@ export function MinimalSession() {
         },
       },
       {
+        name: "vim.toggle.hideTools",
+        title: "Toggle hide tools",
+        category: "Vim",
+        run: () => {
+          const next = !kv.get("minimal_hide_tools", false)
+          kv.set("minimal_hide_tools", next)
+          toast.show({
+            message: `Hide tools: ${next ? "ON" : "OFF"}`,
+            variant: "info",
+            duration: 2000,
+          })
+          dialog.clear()
+        },
+      },
+      {
         name: "session.sidebar.toggle",
         title: "Toggle sidebar",
         category: "Session",
@@ -762,6 +782,7 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
                                message={message as AssistantMessage}
                                parts={sync.data.part[message.id] ?? []}
                                pureMode={pureMode()}
+                               hideTools={hideTools()}
                             />
                           </Match>
                         </Switch>
