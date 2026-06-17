@@ -1140,7 +1140,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
             <Match when={route.data.type === "home"}>
               {(() => {
                 // FORK-SEAM (opencode-vim): resolve a fork route root when one is registered.
-                const View = globalThis.OPENCODE_TUI_ROOT_COMPONENTS?.Home ?? Home
+                const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Home ?? Home
                 return <View />
               })()}
             </Match>
@@ -1148,7 +1148,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
               <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
                 {(_) => {
                   // FORK-SEAM (opencode-vim): resolve a fork route root when one is registered.
-                  const View = globalThis.OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? Session
+                  const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? Session
                   return <View />
                 }}
               </Show>
