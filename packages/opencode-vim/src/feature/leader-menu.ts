@@ -151,6 +151,8 @@ export const DEFAULT_LEADER_MENU: LeaderGroup[] = [
       { key: "d", label: "toggle diff wrap", icon: "\u{f0216}", action: "command", command: "app.toggle.diffwrap" },
       { key: "p", label: "toggle paste summary", icon: "\u{f020f}", action: "command", command: "app.toggle.paste_summary" },
       { key: "—", label: "", separator: true },
+      { key: "u", label: "pure mode", icon: "\u{f0675}", action: "command", command: "vim.toggle.pureMode" },
+      { key: "—", label: "", separator: true },
       { key: "c", label: "clear", icon: "\u{f00e2}", action: "clear" },
     ],
   },
