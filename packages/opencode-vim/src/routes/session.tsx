@@ -386,8 +386,9 @@ function CompactAssistantMessage(props: {
             {Locale.titlecase(props.message.mode)} · {model()}
           </Show>
           <Show when={props.last && status().type !== "idle"}>
-            {" "}· <span style={{ fg: local.agent.color(props.message.agent) }}>{activityFrame() === 0 ? "●" : "○"}</span>{" "}Thinking
-            <Show when={usage()}>
+            <Show when={!props.pureMode}>{" "}· </Show>
+            <span style={{ fg: local.agent.color(props.message.agent) }}>{activityFrame() === 0 ? "●" : "○"}</span>{" "}Thinking
+            <Show when={usage() && !props.pureMode}>
               {(item) => <> · {[item().context, item().cost].filter(Boolean).join(" · ")}</>}
             </Show>
           </Show>
