@@ -1111,11 +1111,19 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         <box flexGrow={1} minHeight={0} flexDirection="column">
           <Switch>
             <Match when={route.data.type === "home"}>
-              <Home />
+              {(() => {
+                // FORK-SEAM (opencode-vim): resolve a fork route root when one is registered.
+                const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Home ?? Home
+                return <View />
+              })()}
             </Match>
             <Match when={route.data.type === "session"}>
               <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
-                {(_) => <Session />}
+                {(_) => {
+                  // FORK-SEAM (opencode-vim): resolve a fork route root when one is registered.
+                  const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? Session
+                  return <View />
+                }}
               </Show>
             </Match>
           </Switch>
