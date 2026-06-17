@@ -13,7 +13,7 @@ declare global {
 }
 
 export function installMinimalRootComponents(target: typeof globalThis = globalThis) {
-  target.OPENCODE_TUI_ROOT_COMPONENTS = {
+  ;(target as any).OPENCODE_TUI_ROOT_COMPONENTS = {
     Home: MinimalHome,
     Session: MinimalSession,
   }

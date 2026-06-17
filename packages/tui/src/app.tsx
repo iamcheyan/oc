@@ -87,6 +87,16 @@ import { win32DisableProcessedInput, win32FlushInputBuffer } from "./terminal-wi
 import { destroyRenderer } from "./util/renderer"
 import { cliErrorMessage, errorFormat } from "./util/error"
 
+// FORK-SEAM (opencode-vim): allow the fork package to replace only the route roots.
+declare global {
+  var OPENCODE_TUI_ROOT_COMPONENTS:
+    | {
+        Home?: typeof Home
+        Session?: typeof Session
+      }
+    | undefined
+}
+
 registerOpencodeSpinner()
 
 const appGlobalBindingCommands = [
@@ -186,6 +196,21 @@ function isVersionGreater(left: string, right: string) {
 export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const global = yield* Global.Service
   const exit = { epilogue: undefined as string | undefined, reason: undefined as unknown }
+  // FORK-SEAM (opencode-vim): opt into a main-screen renderer for embedded/minimal mode.
+  const minimalMode = process.env.OPENCODE_MINIMAL === "1"
+  const requestedScreenMode = process.env.OPENCODE_MINIMAL_SCREEN_MODE
+  const screenMode =
+    minimalMode &&
+    (requestedScreenMode === "alternate-screen" ||
+      requestedScreenMode === "main-screen" ||
+      requestedScreenMode === "split-footer")
+      ? requestedScreenMode
+      : undefined
+  const requestedFooterHeight = Number(process.env.OPENCODE_MINIMAL_FOOTER_HEIGHT)
+  const footerHeight =
+    minimalMode && Number.isFinite(requestedFooterHeight) && requestedFooterHeight > 0
+      ? Math.trunc(requestedFooterHeight)
+      : undefined
   const result = yield* Effect.scoped(
     Effect.gen(function* () {
       const renderer = yield* Effect.acquireRelease(
@@ -200,6 +225,8 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
               autoFocus: false,
               openConsoleOnError: false,
               useMouse: !Flag.OPENCODE_DISABLE_MOUSE && input.config.mouse,
+              screenMode,
+              footerHeight,
               consoleOptions: {
                 keyBindings: [{ name: "y", ctrl: true, action: "copy-selection" }],
               },
@@ -1029,6 +1056,8 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   })
 
   event.on("installation.update-available", async (evt) => {
+    // FORK-SEAM (opencode-vim): the embedding package owns its update lifecycle.
+    if (process.env.OPENCODE_MINIMAL_DISABLE_UPDATE_CHECK === "1") return
     console.log("installation.update-available", evt)
     const version = evt.properties.version
 
@@ -1111,11 +1140,19 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         <box flexGrow={1} minHeight={0} flexDirection="column">
           <Switch>
             <Match when={route.data.type === "home"}>
-              <Home />
+              {(() => {
+                // FORK-SEAM (opencode-vim): resolve a fork route root when one is registered.
+                const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Home ?? Home
+                return <View />
+              })()}
             </Match>
             <Match when={route.data.type === "session"}>
               <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
-                {(_) => <Session />}
+                {(_) => {
+                  // FORK-SEAM (opencode-vim): resolve a fork route root when one is registered.
+                  const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? Session
+                  return <View />
+                }}
               </Show>
             </Match>
           </Switch>
