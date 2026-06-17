@@ -43,6 +43,5 @@ tsconfig.tsbuildinfo
 /artifacts/
 
 # Fork local dev
-packages/opencode-repl/
 screen/
 test/
