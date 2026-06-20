@@ -741,23 +741,19 @@ export function Prompt(props: PromptProps) {
       "prompt.stash",
       "prompt.stash.pop",
       "prompt.stash.list",
-      "session.interrupt",
       "workspace.set",
     ]),
   }))
 
 
   useBindings(() => ({
-    target: inputTarget,
     enabled: () => inputTarget() !== undefined && !props.disabled && !vimMode.isNormal(),
+    priority: 10,
     bindings: [
       {
         key: "escape",
-        cmd: () => {
-          vimMode.enterNormal()
-          setStore("mode", "normal")
-          inputTarget()?.blur()
-        },
+        preventDefault: true,
+        cmd: (ctx: CommandContext<Renderable, KeyEvent>) => enterVimNormalFromEscape(ctx.event),
       },
     ],
   }))
@@ -908,6 +904,12 @@ export function Prompt(props: PromptProps) {
         mode: store.mode,
         autocompleteVisible: !!auto()?.visible,
       }),
+      capture:
+        store.mode === "normal"
+          ? auto()?.visible
+            ? ["escape", "navigate", "submit", "tab"]
+            : ["escape", "tab"]
+          : undefined,
     }
   })
 
@@ -1193,6 +1195,28 @@ export function Prompt(props: PromptProps) {
       bindings: tuiConfig.keybinds.get("prompt.history.next"),
     }
   })
+
+  useBindings(() => ({
+    target: inputTarget,
+    enabled: () => inputTarget() !== undefined && !props.disabled && !vimMode.isNormal(),
+    bindings: [
+      {
+        key: "escape",
+        preventDefault: true,
+        cmd: (ctx: CommandContext<Renderable, KeyEvent>) => enterVimNormalFromEscape(ctx.event),
+      },
+    ],
+  }))
+
+  function enterVimNormalFromEscape(event?: Pick<KeyEvent, "preventDefault" | "stopPropagation">) {
+    event?.preventDefault()
+    event?.stopPropagation()
+    auto()?.hide()
+    vimMode.enterNormal()
+    setStore("mode", "normal")
+    inputTarget()?.blur()
+    return true
+  }
 
   let submitting = false
   async function submit() {
@@ -1821,7 +1845,11 @@ export function Prompt(props: PromptProps) {
                 setCursorVersion((value) => value + 1)
               }}
               onCursorChange={() => setCursorVersion((value) => value + 1)}
-              onKeyDown={(e: { preventDefault(): void }) => {
+              onKeyDown={(e: KeyEvent) => {
+                if (e.name === "escape" && !props.disabled && !vimMode.isNormal()) {
+                  enterVimNormalFromEscape(e)
+                  return
+                }
                 if (props.disabled || isLeaderActive() || vimMode.isNormal()) {
                   e.preventDefault()
                   return
