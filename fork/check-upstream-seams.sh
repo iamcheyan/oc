@@ -9,7 +9,7 @@ RESET='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ALLOWLIST="$SCRIPT_DIR/upstream-seams.allowlist"
-UPSTREAM_REF="${UPSTREAM_REF:-upstream/main}"
+UPSTREAM_REF="${UPSTREAM_REF:-upstream/dev}"
 
 cd "$ROOT_DIR"
 
