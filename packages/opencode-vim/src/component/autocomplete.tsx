@@ -20,6 +20,7 @@ import type { PromptInfo } from "@tui/prompt/history"
 import { useFrecency } from "@tui/prompt/frecency"
 import { useBindings, useCommandSlashes, useOpencodeModeStack } from "@tui/keymap"
 import { displayCharAt, mentionTriggerIndex } from "@tui/prompt/display"
+import { useVimMode } from "@/feature/vim-mode"
 
 function removeLineRange(input: string) {
   const hashIndex = input.lastIndexOf("#")
@@ -55,6 +56,7 @@ function extractLineRange(input: string) {
 
 export type AutocompleteRef = {
   onInput: (value: string) => void
+  hide: () => void
   visible: false | "@" | "/"
 }
 
@@ -94,6 +96,7 @@ export function Autocomplete(props: {
   const frecency = useFrecency()
   const tuiConfig = useTuiConfig()
   const paths = useTuiPaths()
+  const vimMode = useVimMode()
   const [store, setStore] = createStore({
     index: 0,
     selected: 0,
@@ -596,6 +599,7 @@ export function Autocomplete(props: {
         category: "Autocomplete",
         run() {
           hide()
+          vimMode.enterNormal()
         },
       },
       {
@@ -696,6 +700,7 @@ export function Autocomplete(props: {
           setStore("index", idx)
         }
       },
+      hide,
     })
   })
 
