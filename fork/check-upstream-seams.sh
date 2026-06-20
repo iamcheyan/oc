@@ -9,7 +9,7 @@ RESET='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ALLOWLIST="$SCRIPT_DIR/upstream-seams.allowlist"
-UPSTREAM_REF="${UPSTREAM_REF:-upstream/dev}"
+UPSTREAM_REF="${UPSTREAM_REF:-upstream/main}"
 
 cd "$ROOT_DIR"
 
@@ -44,7 +44,28 @@ is_fork_owned() {
     fork/* | packages/opencode-vim/* | packages/miniapps/* | packages/bedrock-scanner/* | .oc/*)
       return 0
       ;;
-    README.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml)
+    packages/web/* | packages/ui/*)
+      return 0
+      ;;
+    patches/*)
+      return 0
+      ;;
+    script/*)
+      return 0
+      ;;
+    sdks/vscode/*)
+      return 0
+      ;;
+    specs/*)
+      return 0
+      ;;
+    perf/*)
+      return 0
+      ;;
+    scripts/*)
+      return 0
+      ;;
+    README.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml | sqlc.yaml | sst.config.ts | sst-env.d.ts | tsconfig.json | turbo.json | screenshot-uk.png)
       return 0
       ;;
   esac
