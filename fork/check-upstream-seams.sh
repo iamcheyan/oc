@@ -65,7 +65,7 @@ is_fork_owned() {
     scripts/*)
       return 0
       ;;
-    README.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml | sqlc.yaml | sst.config.ts | sst-env.d.ts | tsconfig.json | turbo.json | screenshot-uk.png)
+    README.md | README.*.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml | sqlc.yaml | sst.config.ts | sst-env.d.ts | tsconfig.json | turbo.json | screenshot-uk.png)
       return 0
       ;;
   esac
