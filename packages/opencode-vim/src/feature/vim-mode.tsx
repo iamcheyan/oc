@@ -21,6 +21,7 @@ import {
 } from "@/feature/leader-menu"
 import { performConfigBackup, performFullBackup, performFullRestore } from "../util/backup"
 import { loadConfig, getTestableProviders, testProvider, testAuth, type ProviderTestEntry, type ProviderTestResult, colors, getColumnWidthsByTerminalWidth, formatRow, type ColumnWidths } from "../util/api-test"
+import { DialogRouting } from "@/component/dialog-routing"
 
 export type { LeaderGroup, LeaderLeaf, LeaderSeparator, LeaderAction }
 export { isSeparator, getLeaderMenu }
@@ -1071,6 +1072,10 @@ export function useVimSession(
         dialog.replace(() => <DialogTestAPI dialog={dialog} />)
         return
       }
+      if (entry.action === "routing") {
+        dialog.replace(() => <DialogRouting dialog={dialog} directory={directory()} />)
+        return
+      }
       if (entry.action === "lazygit") {
         closeLeaderMenu()
         queueMicrotask(() => {
@@ -1541,6 +1546,10 @@ export function useVimHome(
       }
       if (entry.action === "api_test") {
         dialog.replace(() => <DialogTestAPI dialog={dialog} />)
+        return
+      }
+      if (entry.action === "routing") {
+        dialog.replace(() => <DialogRouting dialog={dialog} directory={directory()} />)
         return
       }
       if (entry.action === "lazygit") {
