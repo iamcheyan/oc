@@ -72,6 +72,23 @@ is_fork_owned() {
   return 1
 }
 
+list_seam_marker_files() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -l 'FORK-SEAM \(opencode-vim\)' packages/opencode/src packages/tui/src 2>/dev/null || true
+    return
+  fi
+  grep -RIl 'FORK-SEAM (opencode-vim)' packages/opencode/src packages/tui/src 2>/dev/null || true
+}
+
+has_seam_marker() {
+  local file="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q 'FORK-SEAM \(opencode-vim\)' "$file"
+    return
+  fi
+  grep -q 'FORK-SEAM (opencode-vim)' "$file"
+}
+
 failed=0
 echo -e "${CYAN}Checking fork ownership against $UPSTREAM_REF...${RESET}"
 
@@ -90,7 +107,7 @@ while IFS= read -r file; do
     echo -e "${RED}FORK-SEAM marker found outside allowlist:${RESET} $file"
     failed=1
   fi
-done < <(rg -l 'FORK-SEAM \(opencode-vim\)' packages/opencode/src packages/tui/src 2>/dev/null || true)
+done < <(list_seam_marker_files)
 
 for file in "${allowed[@]}"; do
   if [ ! -f "$file" ]; then
@@ -98,7 +115,7 @@ for file in "${allowed[@]}"; do
     failed=1
     continue
   fi
-  if ! rg -q 'FORK-SEAM \(opencode-vim\)' "$file"; then
+  if ! has_seam_marker "$file"; then
     echo -e "${RED}Allowlisted file has no seam marker:${RESET} $file"
     failed=1
   fi
