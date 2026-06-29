@@ -4,7 +4,7 @@ Scope: fork-specific code, documentation, build logic, and upstream sync work.
 
 ## Git Model
 
-- `upstream/main` is the base.
+- `upstream/dev` is the base (see root AGENTS.md: default branch is `dev`).
 - `origin/main` is a linear fork patch queue on top of that base.
 - Use `bash fork/update.sh` for routine upstream updates.
 - Keep the worktree clean before syncing; the script does not hide work in a stash.
@@ -22,7 +22,7 @@ Fork-owned paths include:
 - `packages/bedrock-scanner/**`
 - `.oc/**`
 - `.gitignore`
-- `.opencode/.gitignore`
+- `.opencode/**`
 - `README.md`
 - `.github/workflows/fork-build.yml`
 - the fork workspace entries in `package.json` and `bun.lock`
