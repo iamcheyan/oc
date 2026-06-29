@@ -84,8 +84,6 @@ export const DEFAULT_LEADER_MENU: LeaderGroup[] = [
       { key: "a", label: "agents", icon: "\u{f06a9}", action: "command", command: "agent.list" },
       { key: "n", label: "next agent", icon: "\u{f04ad}", action: "command", command: "agent.cycle" },
       { key: "p", label: "prev agent", icon: "\u{f04ae}", action: "command", command: "agent.cycle.reverse" },
-      { key: "—", label: "", separator: true },
-      { key: "r", label: "routing", icon: "\u{f012e}", action: "routing" },
     ],
   },
   {
