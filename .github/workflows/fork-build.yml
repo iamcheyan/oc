@@ -29,6 +29,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream dev
+        run: git fetch https://github.com/anomalyco/opencode.git dev:refs/remotes/upstream/dev
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
