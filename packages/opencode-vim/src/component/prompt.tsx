@@ -65,6 +65,7 @@ import { useAutocompleteHost } from "@/context/autocomplete-host"
 import { useVimMode } from "@/feature/vim-mode"
 import { getLeaderMenu, isSeparator, type LeaderGroup, type LeaderLeaf, type LeaderSeparator } from "@/feature/leader-menu"
 import { loadVimConfig } from "@/config/vim"
+import { loadQuickModelConfig, formatSlotModel, quickModelVersion } from "@/config/quick-model"
 
 export type PromptProps = {
   sessionID?: string
@@ -157,6 +158,15 @@ export function Prompt(props: PromptProps) {
   const vimHidePrompt = createMemo(() => kv.get("minimal_vim_hide_prompt") ?? vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => kv.get("minimal_vim_auto_resume") ?? vimConfig().autoResume ?? false)
   const leaderMenu = createMemo(() => props.menu ?? getLeaderMenu(directory()))
+  const quickModelSlots = createMemo(() => {
+    // Read version so this memo re-runs after the config is saved from the dialog.
+    quickModelVersion()
+    const cfg = loadQuickModelConfig(directory())
+    return ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => ({
+      key: k,
+      model: cfg.slots[k] ? formatSlotModel(cfg.slots[k]) : "",
+    }))
+  })
   const isLeaderActive = createMemo(() => {
     if (!vimMode.isNormal()) return false
     return vimMode.isLeaderActive?.() || false
@@ -1770,8 +1780,7 @@ export function Prompt(props: PromptProps) {
                 bottom={2}
                 right={0}
                 marginRight={1}
-                width={leaderMenuWidth()}
-                flexDirection="column"
+                flexDirection="row"
                 backgroundColor={"#111111"}
                 border={["top", "bottom", "left", "right"]}
                 borderColor={RGBA.fromInts(255, 255, 255, 255)}
@@ -1780,51 +1789,87 @@ export function Prompt(props: PromptProps) {
                 paddingBottom={1}
                 paddingLeft={2}
               >
-                <box flexDirection="row" justifyContent="space-between" marginBottom={1}>
-                  <text fg={RGBA.fromInts(255, 255, 255, 255)} attributes={TextAttributes.BOLD}>
-                    {leaderMenuTitle()}
-                  </text>
-                  <text fg={theme.textMuted}>{leaderMenuSubtitle()}</text>
-                </box>
-                <For each={leaderMenuDynamicItems()}>
-                  {(item) => (
-                    isSeparator(item) ? (
-                      <box marginY={0} paddingTop={0} paddingBottom={0}>
-                        <text fg={theme.textMuted} wrapMode="none">{"─".repeat(leaderMenuWidth() - 4)}</text>
-                      </box>
-                    ) : (
-                      <box 
-                        flexDirection="row" 
-                        gap={1} 
-                        width="100%"
-                        backgroundColor={item.key === selectedItem()?.key ? RGBA.fromInts(40, 40, 40, 255) : undefined}
-                      >
-                        <text fg={theme.warning} attributes={TextAttributes.BOLD}>
-                          {item.key}
-                        </text>
-                        <text fg={theme.textMuted}>→</text>
-                        {"icon" in item && item.icon ? (
-                          <text fg={theme.accent}>{item.icon}</text>
-                        ) : null}
-                        <text
-                          fg={"items" in item ? theme.accent : theme.text}
-                          attributes={"items" in item ? TextAttributes.BOLD : undefined}
-                          wrapMode="none"
-                          truncate
+                <Show when={!leaderActiveGroup()}>
+                  <box flexDirection="column" marginRight={2} minWidth={24}>
+                    <text fg={RGBA.fromInts(255, 255, 255, 255)} attributes={TextAttributes.BOLD} marginBottom={1}>
+                      QUICK
+                    </text>
+                    <For each={quickModelSlots()}>
+                      {(slot) => (
+                        <box flexDirection="row" gap={1} width="100%">
+                          <text fg={theme.warning} attributes={TextAttributes.BOLD}>
+                            {slot.key}
+                          </text>
+                          <text fg={theme.textMuted}>→</text>
+                          <text
+                            fg={slot.model ? theme.text : theme.textMuted}
+                            wrapMode="none"
+                            truncate
+                          >
+                            {slot.model || "(empty)"}
+                          </text>
+                        </box>
+                      )}
+                    </For>
+                    <box flexDirection="row" gap={1} width="100%" marginTop={1}>
+                      <text fg={RGBA.fromInts(100, 200, 255, 255)} attributes={TextAttributes.BOLD}>
+                        0
+                      </text>
+                      <text fg={theme.textMuted}>→</text>
+                      <text fg={RGBA.fromInts(100, 200, 255, 255)} wrapMode="none">
+                        ⚙ settings
+                      </text>
+                    </box>
+                  </box>
+                  <box flexDirection="column" border={["left"]} borderColor={theme.textMuted} marginRight={2} />
+                </Show>
+                <box flexDirection="column" width={leaderMenuWidth()}>
+                  <box flexDirection="row" justifyContent="space-between" marginBottom={1}>
+                    <text fg={RGBA.fromInts(255, 255, 255, 255)} attributes={TextAttributes.BOLD}>
+                      {leaderMenuTitle()}
+                    </text>
+                    <text fg={theme.textMuted}>{leaderMenuSubtitle()}</text>
+                  </box>
+                  <For each={leaderMenuDynamicItems()}>
+                    {(item) => (
+                      isSeparator(item) ? (
+                        <box marginY={0} paddingTop={0} paddingBottom={0}>
+                          <text fg={theme.textMuted} wrapMode="none">{"─".repeat(leaderMenuWidth() - 4)}</text>
+                        </box>
+                      ) : (
+                        <box 
+                          flexDirection="row" 
+                          gap={1} 
+                          width="100%"
+                          backgroundColor={item.key === selectedItem()?.key ? RGBA.fromInts(40, 40, 40, 255) : undefined}
                         >
-                          {"items" in item ? `+${item.label}` : item.label}
-                        </text>
-                      </box>
-                    )
-                  )}
-                </For>
-                <box marginTop={1} flexDirection="row" justifyContent="space-between">
-                  <text fg={theme.textMuted}>
-                    {leaderActiveGroup() ? "backspace back" : "esc close"}
-                  </text>
-                  <text fg={theme.textMuted}>
-                    {leaderActiveGroup() ? "esc close" : "space leader"}
-                  </text>
+                          <text fg={theme.warning} attributes={TextAttributes.BOLD}>
+                            {item.key}
+                          </text>
+                          <text fg={theme.textMuted}>→</text>
+                          {"icon" in item && item.icon ? (
+                            <text fg={theme.accent}>{item.icon}</text>
+                          ) : null}
+                          <text
+                            fg={"items" in item ? theme.accent : theme.text}
+                            attributes={"items" in item ? TextAttributes.BOLD : undefined}
+                            wrapMode="none"
+                            truncate
+                          >
+                            {"items" in item ? `+${item.label}` : item.label}
+                          </text>
+                        </box>
+                      )
+                    )}
+                  </For>
+                  <box marginTop={1} flexDirection="row" justifyContent="space-between">
+                    <text fg={theme.textMuted}>
+                      {leaderActiveGroup() ? "backspace back" : "esc close"}
+                    </text>
+                    <text fg={theme.textMuted}>
+                      {leaderActiveGroup() ? "esc close" : "space leader"}
+                    </text>
+                  </box>
                 </box>
               </box>
             </Show>
