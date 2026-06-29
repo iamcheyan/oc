@@ -28,7 +28,7 @@ import { useThinkingMode, nextThinkingMode } from "@tui/context/thinking"
 import { useLocal } from "@tui/context/local"
 import { useEvent } from "@tui/context/event"
 import { RGBA, TextAttributes } from "@opentui/core"
-import { PathFormatterProvider } from "@tui/context/path-format"
+
 import { Locale } from "@/util/locale"
 import {
   getFirstChildSessionID,
@@ -751,8 +751,7 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
   return (
     <AutocompleteHostProvider>
       <MinimalRendererBackground />
-      <PathFormatterProvider path={session()?.directory}>
-        <SessionContext.Provider value={contextValue}>
+      <SessionContext.Provider value={contextValue}>
           <box flexDirection="column" flexGrow={1} minHeight={0} position="relative">
             <Show when={route.sessionID}>
               <MinimalStatusBar sessionID={route.sessionID} pureMode={pureMode()} />
@@ -844,7 +843,6 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
             <Toast />
           </box>
       </SessionContext.Provider>
-      </PathFormatterProvider>
     </AutocompleteHostProvider>
   )
 }
