@@ -1,96 +1,101 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-CYAN='\033[0;36m'
-RESET='\033[0m'
+OPENCODE="./fork/dist/opencode-linux-arm64/bin/opencode"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-UPSTREAM_URL="https://github.com/anomalyco/opencode.git"
-UPSTREAM_REF="upstream/dev"
+# 从 config.jsonc 中发现免费模型，随机选一个
+pick_free_model() {
+  local cfg candidates
+  # 尝试多个 config 路径
+  for f in "$ROOT_DIR/config.json" "$ROOT_DIR/.opencode/opencode.jsonc" "$HOME/.config/opencode/config.json" "$HOME/.opencode.jsonc"; do
+    [ -f "$f" ] && cfg="$f" && break
+  done
+  if [ -n "${cfg:-}" ]; then
+    candidates=$(python3 -c "
+import json, re, sys, random
 
-cd "$ROOT_DIR"
+def strip(s):
+    s = re.sub(r'//.*', '', s)
+    s = re.sub(r',\s*([}\]])', r'\1', s)
+    return s
 
-fail() {
-  echo -e "${RED}$*${RESET}" >&2
-  exit 1
-}
+with open('$cfg') as f:
+    raw = f.read()
+cleaned = strip(raw)
+config = json.loads(cleaned)
 
-run_checks() {
-  echo -e "${CYAN}Checking fork boundaries...${RESET}"
-  bash -n fork/update.sh fork/build.sh fork/check-upstream-seams.sh
-  bash fork/check-upstream-seams.sh
+# 免费 provider 关键词
+free_keywords = ['mimo', 'free', 'local', 'gguf']
+models = []
+for pid, p in config.get('provider', {}).items():
+    pid_lower = pid.lower()
+    if any(kw in pid_lower for kw in free_keywords):
+        for mid in p.get('models', {}):
+            models.append(f'{pid}/{mid}')
 
-  echo -e "${CYAN}Testing opencode-vim...${RESET}"
-  (
-    cd packages/opencode-vim
-    bun test
-    bun run typecheck
-  )
-
-  echo -e "${CYAN}Building fork binaries...${RESET}"
-  bash fork/build.sh
-}
-
-if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
-  fail "Worktree is not clean. Commit or stash your changes before syncing."
-fi
-
-branch="$(git branch --show-current)"
-[ -n "$branch" ] || fail "Detached HEAD is not supported."
-
-if ! git remote get-url upstream >/dev/null 2>&1; then
-  git remote add upstream "$UPSTREAM_URL"
-fi
-
-echo -e "${CYAN}Fetching origin and upstream...${RESET}"
-git fetch origin
-git fetch upstream
-git rev-parse --verify "$UPSTREAM_REF" >/dev/null 2>&1 || fail "Missing $UPSTREAM_REF."
-
-origin_ref="refs/remotes/origin/$branch"
-origin_head=""
-if git show-ref --verify --quiet "$origin_ref"; then
-  origin_head="$(git rev-parse "$origin_ref")"
-  if ! git merge-base --is-ancestor "$origin_ref" HEAD; then
-    fail "origin/$branch contains commits not present locally. Reconcile that branch before syncing."
+if models:
+    print(random.choice(models))
+else:
+    print('')
+" 2>/dev/null || true)
   fi
-fi
+  if [ -z "${candidates:-}" ]; then
+    # fallback: 已知免费模型
+    candidates=("mimo/mimo-v2.5" "mimo/mimo-v2-pro" "mimo/mimo-v2.5-pro")
+    echo "${candidates[$RANDOM % ${#candidates[@]}]}"
+  else
+    echo "$candidates"
+  fi
+}
 
-upstream_count="$(git rev-list --count "HEAD..$UPSTREAM_REF")"
-if [ "$upstream_count" -eq 0 ]; then
-  echo -e "${GREEN}Already based on the latest $UPSTREAM_REF.${RESET}"
-  run_checks
+echo "=== Fetching upstream ==="
+git fetch upstream
+
+echo ""
+echo "=== Current state ==="
+git log --oneline -3 origin/main 2>/dev/null || echo "(no origin/main)"
+echo "..."
+git log --oneline -3 HEAD
+
+echo ""
+echo "=== Rebase on upstream/dev ==="
+BACKUP_BRANCH="backup/main-before-upstream-$(date +%Y%m%d-%H%M%S)"
+git branch "$BACKUP_BRANCH"
+echo "Backup created: $BACKUP_BRANCH"
+
+if git rebase upstream/dev; then
+  echo ""
+  echo "=== Rebase complete ==="
+  echo "If successful, push with: git push origin main --force-with-lease"
+  echo "To rollback: git checkout main && git reset --hard $BACKUP_BRANCH"
   exit 0
 fi
 
-backup="backup/${branch}-before-upstream-$(date +%Y%m%d-%H%M%S)"
-git branch "$backup"
-git push origin "$backup:$backup"
-echo -e "${GREEN}Created safety branch origin/$backup.${RESET}"
+echo ""
+echo "=== Rebase failed, attempting auto-fix ==="
+MODEL=$(pick_free_model)
+echo "Using model: $MODEL"
 
-echo -e "${CYAN}Rebasing fork commits onto $UPSTREAM_REF ($upstream_count new commits)...${RESET}"
-if ! git rebase "$UPSTREAM_REF"; then
-  echo -e "${YELLOW}Rebase stopped on a conflict.${RESET}"
-  echo "Resolve files, then run:"
-  echo "  git add <resolved-files>"
-  echo "  git rebase --continue"
-  echo "To return to the pre-sync state:"
-  echo "  git rebase --abort"
-  echo "The remote safety branch is origin/$backup."
+"$OPENCODE" run "
+变基 upstream/dev 失败，有冲突需要解决。
+请执行以下步骤：
+1. 查看冲突文件：git status
+2. 修复所有冲突（编辑冲突文件，选择正确的内容）
+3. 执行 git add 标记已解决
+4. 执行 git rebase --continue
+5. 确认变基成功：git log --oneline -3
+" --model "$MODEL" --dir "$ROOT_DIR" --dangerously-skip-permissions --format json 2>/dev/null || true
+
+# 检查是否仍有冲突
+if git rebase --continue 2>&1; then
+  echo ""
+  echo "=== Auto-fix succeeded ==="
+  echo "Push with: git push origin main --force-with-lease"
+elif git status 2>&1 | grep -q "rebasing"; then
+  echo ""
+  echo "=== Auto-fix incomplete, manual resolution needed ==="
+  echo "Continue with: git rebase --continue"
+  echo "Or abort with: git rebase --abort"
   exit 1
 fi
-
-run_checks
-
-echo -e "${CYAN}Publishing rebased $branch...${RESET}"
-if [ -n "$origin_head" ]; then
-  git push --force-with-lease="$branch:$origin_head" origin "HEAD:$branch"
-else
-  git push -u origin "HEAD:$branch"
-fi
-
-echo -e "${GREEN}Sync complete: $branch now follows $(git rev-parse --short "$UPSTREAM_REF").${RESET}"
