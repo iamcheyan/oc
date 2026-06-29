@@ -12,7 +12,6 @@ import { useVimMode } from "@/feature/vim-mode"
 import { useThinkingMode } from "@tui/context/thinking"
 import { Prompt, type PromptRef } from "@/component/prompt"
 import type { LeaderGroup } from "@/feature/leader-menu"
-import { loadRoutingConfig } from "@/config/routing"
 
 export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean }) {
   const local = useLocal()
@@ -32,7 +31,6 @@ export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean
   const modeIsNormal = createMemo(() => vimMode.isNormal())
   const modeBackground = createMemo(() => (modeIsNormal() ? theme.success : theme.primary))
   const modeForeground = createMemo(() => (modeIsNormal() ? RGBA.fromInts(0, 0, 0) : selectedForeground(theme, theme.primary)))
-  const routingConfig = createMemo(() => loadRoutingConfig(directory()))
 
   return (
     <box flexShrink={0} width="100%" flexDirection="row" justifyContent="space-between">
@@ -54,11 +52,6 @@ export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean
         when={local.model.current()}
         fallback={
           <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-            <Show when={routingConfig().enabled}>
-              <span style={{ fg: RGBA.fromInts(100, 200, 100, 255) }}>
-                ROUTING{" "}
-              </span>
-            </Show>
             <span style={{ fg: local.agent.current() ? local.agent.color(local.agent.current()!.name) : theme.textMuted }}>
               {agentLabel()}
             </span>
@@ -70,11 +63,6 @@ export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean
             <span style={{ fg: theme.textMuted }}>
               {thinking.mode() === "show" ? "󰧑" : "󰂛"}
             </span>
-            <Show when={routingConfig().enabled}>
-              <span style={{ fg: RGBA.fromInts(100, 200, 100, 255) }}>
-                {" "}ROUTING
-              </span>
-            </Show>
             <span style={{ fg: theme.textMuted }}> </span>
             <span style={{ fg: local.agent.current() ? local.agent.color(local.agent.current()!.name) : theme.textMuted }}>
               {agentLabel()}
