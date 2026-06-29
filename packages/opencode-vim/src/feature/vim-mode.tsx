@@ -21,7 +21,10 @@ import {
 } from "@/feature/leader-menu"
 import { performConfigBackup, performFullBackup, performFullRestore } from "../util/backup"
 import { loadConfig, getTestableProviders, testProvider, testAuth, type ProviderTestEntry, type ProviderTestResult, colors, getColumnWidthsByTerminalWidth, formatRow, type ColumnWidths } from "../util/api-test"
-import { DialogRouting } from "@/component/dialog-routing"
+import { loadQuickModelConfig, getSlotModel } from "@/config/quick-model"
+import { DialogQuickModel } from "@/component/dialog-quick-model"
+import { useLocal } from "@tui/context/local"
+
 
 export type { LeaderGroup, LeaderLeaf, LeaderSeparator, LeaderAction }
 export { isSeparator, getLeaderMenu }
@@ -881,6 +884,7 @@ export function useVimSession(
   const kv = useKV()
   const renderer = useRenderer()
   const keymap = useOpencodeKeymap()
+  const local = useLocal()
   let wasNormal: boolean | undefined = undefined
   let spaceActive = false
 
@@ -1072,10 +1076,6 @@ export function useVimSession(
         dialog.replace(() => <DialogTestAPI dialog={dialog} />)
         return
       }
-      if (entry.action === "routing") {
-        dialog.replace(() => <DialogRouting dialog={dialog} directory={directory()} />)
-        return
-      }
       if (entry.action === "lazygit") {
         closeLeaderMenu()
         queueMicrotask(() => {
@@ -1119,6 +1119,21 @@ export function useVimSession(
         keymap.dispatchCommand(entry.command)
       }
     })
+  }
+
+  const handleQuickModel = (key: string) => {
+    closeLeaderMenu()
+    queueMicrotask(() => {
+      if (key === "0") {
+        dialog.replace(() => <DialogQuickModel dialog={dialog} directory={directory()} />)
+        return
+      }
+      const cfg = loadQuickModelConfig(directory())
+      const model = getSlotModel(cfg, key)
+      if (!model) return
+      local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
+    })
+    return true
   }
 
   const handleLeaderRoot = (key: string) => {
@@ -1220,6 +1235,11 @@ export function useVimSession(
           key: entry.key,
           when: () => isVimNormalActive() && !leaderGroup(),
           cmd: () => handleLeaderRoot(entry.key),
+        })),
+        ..."0123456789".split("").map((d) => ({
+          key: d,
+          when: () => isVimNormalActive() && !leaderGroup(),
+          cmd: () => handleQuickModel(d),
         })),
       ] : []),
       {
@@ -1385,6 +1405,7 @@ export function useVimHome(
   const kv = useKV()
   const renderer = useRenderer()
   const keymap = useOpencodeKeymap()
+  const local = useLocal()
 
   const selectableItems = createMemo(() => {
     const group = menu().find((item) => item.key === leaderGroup())
@@ -1548,10 +1569,6 @@ export function useVimHome(
         dialog.replace(() => <DialogTestAPI dialog={dialog} />)
         return
       }
-      if (entry.action === "routing") {
-        dialog.replace(() => <DialogRouting dialog={dialog} directory={directory()} />)
-        return
-      }
       if (entry.action === "lazygit") {
         runLazyGit()
         return
@@ -1564,6 +1581,21 @@ export function useVimHome(
         keymap.dispatchCommand(entry.command)
       }
     })
+  }
+
+  const handleQuickModel = (key: string) => {
+    closeLeaderMenu()
+    queueMicrotask(() => {
+      if (key === "0") {
+        dialog.replace(() => <DialogQuickModel dialog={dialog} directory={directory()} />)
+        return
+      }
+      const cfg = loadQuickModelConfig(directory())
+      const model = getSlotModel(cfg, key)
+      if (!model) return
+      local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
+    })
+    return true
   }
 
   const handleLeaderRoot = (key: string) => {
@@ -1664,6 +1696,11 @@ export function useVimHome(
           key: entry.key,
           when: () => isVimNormalActive() && !leaderGroup(),
           cmd: () => handleLeaderRoot(entry.key),
+        })),
+        ..."0123456789".split("").map((d) => ({
+          key: d,
+          when: () => isVimNormalActive() && !leaderGroup(),
+          cmd: () => handleQuickModel(d),
         })),
       ] : []),
       {
