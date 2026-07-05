@@ -1,5 +1,6 @@
 import { createSignal, createMemo, Show, For, onMount } from "solid-js"
 import { useBindings } from "@tui/keymap"
+import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
 import { useSync } from "@tui/context/sync"
 import { useForkTheme } from "@/util/theme"
 import { RGBA, TextAttributes } from "@opentui/core"
@@ -67,7 +68,7 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
 
   // Slot view bindings
   useBindings(() => ({
-    enabled: !browse(),
+    enabled: reactiveMatcherFromSignal(() => !browse()),
     bindings: [
       { key: "escape", desc: "Close", group: "Dialog", cmd: () => props.dialog.clear() },
       { key: "up", desc: "Previous slot", group: "Dialog", cmd: () => { setSelectedSlot((i) => Math.max(0, i - 1)); return true } },
@@ -88,22 +89,22 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
           setConfig((c) => ({ slots: { ...c.slots, [slot]: "" } }))
         },
       },
-          {
-            key: "s", desc: "Save and close", group: "Dialog", cmd: async () => {
-              saveQuickModelConfig(props.directory, config())
-              setStatus("saved")
-              setTimeout(() => props.dialog.clear(), 600)
-            },
-          },
-          {
-            key: "q", desc: "Close without saving", group: "Dialog", cmd: () => props.dialog.clear(),
-          },
+      {
+        key: "s", desc: "Save and close", group: "Dialog", cmd: async () => {
+          saveQuickModelConfig(props.directory, config())
+          setStatus("saved")
+          setTimeout(() => props.dialog.clear(), 600)
+        },
+      },
+      {
+        key: "q", desc: "Close without saving", group: "Dialog", cmd: () => props.dialog.clear(),
+      },
     ],
   }))
 
   // Model browse bindings (search active)
   useBindings(() => ({
-    enabled: browse(),
+    enabled: reactiveMatcherFromSignal(browse),
     bindings: [
       {
         key: "escape", desc: "Back to slots", group: "Dialog", cmd: () => {
