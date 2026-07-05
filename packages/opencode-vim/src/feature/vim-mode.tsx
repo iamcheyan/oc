@@ -1128,8 +1128,11 @@ export function useVimSession(
         dialog.replace(() => <DialogQuickModel dialog={dialog} directory={directory()} />)
         return
       }
-      const cfg = loadQuickModelConfig(directory())
+      const cfg = loadQuickModelConfig()
       const model = getSlotModel(cfg, key)
+      // DEBUG: log to temp file to diagnose slot mapping
+      const debugMsg = `[quick-model] key=${key} slots=${JSON.stringify(cfg.slots)} model=${JSON.stringify(model)}\n`
+      try { require("node:fs").appendFileSync("/tmp/quick-model-debug.log", debugMsg) } catch {}
       if (!model) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
     })
@@ -1590,8 +1593,11 @@ export function useVimHome(
         dialog.replace(() => <DialogQuickModel dialog={dialog} directory={directory()} />)
         return
       }
-      const cfg = loadQuickModelConfig(directory())
+      const cfg = loadQuickModelConfig()
       const model = getSlotModel(cfg, key)
+      // DEBUG: log to temp file to diagnose slot mapping
+      const debugMsg = `[quick-model-home] key=${key} slots=${JSON.stringify(cfg.slots)} model=${JSON.stringify(model)}\n`
+      try { require("node:fs").appendFileSync("/tmp/quick-model-debug.log", debugMsg) } catch {}
       if (!model) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
     })

@@ -218,6 +218,10 @@ export function Prompt(props: PromptProps) {
           const isShowing = kv.get("minimal_sidebar_visible") === true
           label = isShowing ? "hide sidebar" : "show sidebar"
           icon = isShowing ? "" : ""
+        } else if (item.command === "vim.toggle.autoAllowPermissions") {
+          const isAuto = kv.get("minimal_permission_auto_allow") === true
+          label = isAuto ? "ask for permissions" : "auto-allow all"
+          icon = isAuto ? "" : ""
         }
       }
 

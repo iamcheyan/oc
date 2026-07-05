@@ -16,7 +16,7 @@ import { useKV } from "@tui/context/kv"
 import { AutocompleteHostProvider } from "@/context/autocomplete-host"
 import { MinimalHomePromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
 import { getLeaderMenu, useVimHome, useVimMode } from "@/feature/vim-mode"
-import { loadVimConfig } from "@/config/vim"
+import { loadVimConfig, saveVimConfig } from "@/config/vim"
 
 let seededHomePrompt = false
 
@@ -46,6 +46,7 @@ export function MinimalHome() {
   const vimHidePrompt = createMemo(() => kv.get("minimal_vim_hide_prompt") ?? vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => kv.get("minimal_vim_auto_resume") ?? vimConfig().autoResume ?? false)
   const pureMode = createMemo(() => kv.get("minimal_pure_mode") ?? false)
+  const autoAllowPermissions = createMemo(() => kv.get("minimal_permission_auto_allow") ?? vimConfig().autoAllowPermissions ?? false)
   let sent = false
 
   onMount(() => {
@@ -157,6 +158,22 @@ export function MinimalHome() {
           kv.set("minimal_pure_mode", next)
           toast.show({
             message: `Pure mode: ${next ? "ON" : "OFF"}`,
+            variant: "info",
+            duration: 2000,
+          })
+          dialog.clear()
+        },
+      },
+      {
+        name: "vim.toggle.autoAllowPermissions",
+        title: "Toggle auto-allow permissions",
+        category: "Vim",
+        run: () => {
+          const next = !autoAllowPermissions()
+          kv.set("minimal_permission_auto_allow", next)
+          saveVimConfig(directory(), { autoAllowPermissions: next })
+          toast.show({
+            message: `Auto-allow permissions: ${next ? "ON" : "OFF"}`,
             variant: "info",
             duration: 2000,
           })
