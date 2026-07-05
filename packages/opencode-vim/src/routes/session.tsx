@@ -57,6 +57,7 @@ import { Sidebar } from "@/component/sidebar"
 import { useBindings } from "@tui/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
 import { SimpleTool } from "@/component/simple-tool"
+import { loadVimConfig, saveVimConfig } from "@/config/vim"
 import type {
   AssistantMessage,
   Part,
@@ -384,9 +385,11 @@ function CompactAssistantMessage(props: {
           props.message.error?.name === "MessageAbortedError"
         }
       >
-        <text fg={theme.textMuted}>
+        <text fg={props.message.error?.name === "MessageAbortedError" ? theme.error : theme.textMuted}>
           <Show when={!props.pureMode}>
-            <span style={{ fg: local.agent.color(props.message.agent) }}>✔ </span>
+            <span style={{ fg: props.message.error?.name === "MessageAbortedError" ? theme.error : local.agent.color(props.message.agent) }}>
+              {props.message.error?.name === "MessageAbortedError" ? "⏸ " : "✔ "}
+            </span>
             {Locale.titlecase(props.message.mode)} · {model()}
           </Show>
           <Show when={props.last && status().type !== "idle"}>
@@ -428,6 +431,8 @@ export function MinimalSession() {
   const leaderMenu = createMemo(() => getLeaderMenu(directory()))
   const pureMode = createMemo(() => kv.get("minimal_pure_mode") ?? false)
   const hideTools = createMemo(() => kv.get("minimal_hide_tools") ?? false)
+  const vimConfig = createMemo(() => loadVimConfig(directory()))
+  const autoAllowPermissions = createMemo(() => kv.get("minimal_permission_auto_allow") ?? vimConfig().autoAllowPermissions ?? false)
 
   const session = createMemo(() => sync.session.get(route.sessionID))
   const children = createMemo(() => {
@@ -670,8 +675,38 @@ export function MinimalSession() {
           dialog.clear()
         },
       },
+      {
+        name: "vim.toggle.autoAllowPermissions",
+        title: "Toggle auto-allow permissions",
+        category: "Vim",
+        run: () => {
+          const next = !autoAllowPermissions()
+          kv.set("minimal_permission_auto_allow", next)
+          saveVimConfig(directory(), { autoAllowPermissions: next })
+          toast.show({
+            message: `Auto-allow permissions: ${next ? "ON" : "OFF"}`,
+            variant: "info",
+            duration: 2000,
+          })
+          dialog.clear()
+        },
+      },
     ],
   }))
+
+  // Auto-reply to pending permissions when auto-allow is enabled
+  createEffect(() => {
+    const active = kv.get("minimal_permission_auto_allow") === true
+    if (!active) return
+    for (const p of permissions()) {
+      void sdk.client.permission.reply({
+        reply: "always",
+        requestID: p.id,
+        directory: directory(),
+        workspace: project.workspace.current(),
+      })
+    }
+  })
 
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
