@@ -42,3 +42,5 @@ screen/
 test/
 .oc/quick-model.jsonc
 .oc/vim.jsonc
+.oc/routing.jsonc
+.opencode/mina-routing.jsonc
