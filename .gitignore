@@ -40,3 +40,5 @@ tsconfig.tsbuildinfo
 # Fork local dev
 screen/
 test/
+.oc/quick-model.jsonc
+.oc/vim.jsonc
