@@ -18,6 +18,7 @@ import { useSync } from "@tui/context/sync"
 import { MinimalRendererBackground, selectedForeground, useForkTheme } from "@/util/theme"
 import { useProject } from "@tui/context/project"
 import { useDialog } from "@tui/ui/dialog"
+import { DialogConfirm } from "@tui/ui/dialog-confirm"
 import { useTuiConfig } from "@tui/config"
 import { useKV } from "@tui/context/kv"
 import { useSDK } from "@tui/context/sdk"
@@ -27,6 +28,10 @@ import { usePromptRef } from "@tui/context/prompt"
 import { useThinkingMode, nextThinkingMode } from "@tui/context/thinking"
 import { useLocal } from "@tui/context/local"
 import { useEvent } from "@tui/context/event"
+import { useClipboard } from "@tui/context/clipboard"
+import { DialogTimeline } from "@tui/routes/session/dialog-timeline"
+import { DialogForkFromTimeline } from "@tui/routes/session/dialog-fork-from-timeline"
+import { DialogSessionRename } from "@tui/component/dialog-session-rename"
 import { RGBA, TextAttributes } from "@opentui/core"
 
 import { Locale } from "@/util/locale"
@@ -61,8 +66,10 @@ import { loadVimConfig, saveVimConfig } from "@/config/vim"
 import type {
   AssistantMessage,
   Part,
+  ToolPart,
   UserMessage as UserMessageType,
 } from "@opencode-ai/sdk/v2"
+import type { PromptInfo } from "@tui/prompt/history"
 import { createCopyMode } from "@/feature/copy-mode"
 import { useVimMode, useVimSession } from "@/feature/vim-mode"
 import { getLeaderMenu } from "@/feature/leader-menu"
@@ -376,7 +383,7 @@ function CompactAssistantMessage(props: {
           props.message.error && props.message.error.name !== "MessageAbortedError"
         }
       >
-        <text fg={theme.error}>{props.message.error?.data.message}</text>
+        <text fg={theme.error}>{errorMessage(props.message.error)}</text>
       </Show>
       <Show
         when={
@@ -422,6 +429,7 @@ export function MinimalSession() {
   const dialog = useDialog()
   const renderer = useRenderer()
   const sdk = useSDK()
+  const clipboard = useClipboard()
   const editor = useEditorContext()
   const toast = useToast()
   const local = useLocal()
@@ -442,6 +450,19 @@ export function MinimalSession() {
       .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
+  const foregroundTasks = createMemo(() =>
+    sync.data.capabilities.experimentalBackgroundSubagents
+      ? messages().flatMap((message) =>
+          (sync.data.part[message.id] ?? []).filter(
+            (part): part is ToolPart =>
+              part.type === "tool" &&
+              part.tool === "task" &&
+              part.state.status === "running" &&
+              part.state.metadata?.background !== true,
+          ),
+        )
+      : [],
+  )
   const permissions = createMemo(() => {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.permission[x.id] ?? [])
@@ -501,6 +522,12 @@ export function MinimalSession() {
   }))
 
   useBindings(() => ({
+    enabled: reactiveMatcherFromSignal(() => foregroundTasks().length > 0),
+    priority: 1,
+    bindings: tuiConfig.keybinds.get("session.background"),
+  }))
+
+  useBindings(() => ({
     enabled: commandMatcher,
     bindings: [
       {
@@ -554,8 +581,191 @@ export function MinimalSession() {
     }
   }
 
+  function scrollToMessage(messageID?: string) {
+    if (!messageID || !scroll) return
+    const child = scroll.getChildren().find((item: { id?: string }) => item.id === messageID)
+    if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
+
+  function copyShareURL(url: string) {
+    void clipboard.write?.(url).then(
+      () => toast.show({ message: "Share URL copied to clipboard!", variant: "success" }),
+      () => toast.show({ message: "Failed to copy URL to clipboard", variant: "error" }),
+    )
+  }
+
   useBindings(() => ({
     commands: [
+      {
+        name: "session.share",
+        title: session()?.share?.url ? "Copy share link" : "Share session",
+        category: "Session",
+        enabled: sync.data.config.share !== "disabled",
+        slashName: "share",
+        run: async () => {
+          const url = session()?.share?.url
+          if (url) {
+            copyShareURL(url)
+            dialog.clear()
+            return
+          }
+          if (!kv.get("share_consent", false)) {
+            const ok = await DialogConfirm.show(dialog, "Share Session", "Are you sure you want to share it?")
+            if (ok !== true) return
+            kv.set("share_consent", true)
+          }
+          await sdk.client.session
+            .share({
+              sessionID: route.sessionID,
+            })
+            .then((res) => {
+              const shareURL = res.data?.share?.url
+              if (shareURL) copyShareURL(shareURL)
+            })
+            .catch((error) => {
+              toast.show({
+                message: errorMessage(error),
+                variant: "error",
+              })
+            })
+          dialog.clear()
+        },
+      },
+      {
+        name: "session.unshare",
+        title: "Unshare session",
+        category: "Session",
+        enabled: !!session()?.share?.url,
+        slashName: "unshare",
+        run: async () => {
+          await sdk.client.session
+            .unshare({
+              sessionID: route.sessionID,
+            })
+            .then(() => toast.show({ message: "Session unshared successfully", variant: "success" }))
+            .catch((error) => {
+              toast.show({
+                message: errorMessage(error),
+                variant: "error",
+              })
+            })
+          dialog.clear()
+        },
+      },
+      {
+        name: "session.rename",
+        title: "Rename session",
+        category: "Session",
+        slashName: "rename",
+        run: () => {
+          dialog.replace(() => <DialogSessionRename session={route.sessionID} />)
+        },
+      },
+      {
+        name: "session.timeline",
+        title: "Jump to message",
+        category: "Session",
+        slashName: "timeline",
+        run: () => {
+          dialog.replace(() => (
+            <DialogTimeline
+              onMove={scrollToMessage}
+              sessionID={route.sessionID}
+              setPrompt={(next) => prompt?.set(next)}
+            />
+          ))
+        },
+      },
+      {
+        name: "session.fork",
+        title: "Fork session",
+        category: "Session",
+        slashName: "fork",
+        run: () => {
+          dialog.replace(() => <DialogForkFromTimeline onMove={scrollToMessage} sessionID={route.sessionID} />)
+        },
+      },
+      {
+        name: "session.compact",
+        title: "Compact session",
+        category: "Session",
+        slashName: "compact",
+        slashAliases: ["summarize"],
+        run: () => {
+          const selectedModel = local.model.current()
+          if (!selectedModel) {
+            toast.show({
+              variant: "warning",
+              message: "Connect a provider to summarize this session",
+              duration: 3000,
+            })
+            return
+          }
+          void sdk.client.session.summarize({
+            sessionID: route.sessionID,
+            modelID: selectedModel.modelID,
+            providerID: selectedModel.providerID,
+          })
+          dialog.clear()
+        },
+      },
+      {
+        name: "session.undo",
+        title: "Undo previous message",
+        category: "Session",
+        slashName: "undo",
+        run: async () => {
+          const status = sync.data.session_status?.[route.sessionID]
+          if (status?.type !== "idle") await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+          const revert = session()?.revert?.messageID
+          const message = messages().findLast((item) => (!revert || item.id < revert) && item.role === "user")
+          if (!message) return
+          void sdk.client.session
+            .revert({
+              sessionID: route.sessionID,
+              messageID: message.id,
+            })
+            .then(() => {
+              toBottom()
+            })
+          const parts = sync.data.part[message.id] ?? []
+          prompt?.set(
+            parts.reduce(
+              (agg, part) => {
+                if (part.type === "text" && !part.synthetic) agg.input += part.text
+                if (part.type === "file") agg.parts.push(part)
+                return agg
+              },
+              { input: "", parts: [] as PromptInfo["parts"] },
+            ),
+          )
+          dialog.clear()
+        },
+      },
+      {
+        name: "session.redo",
+        title: "Redo",
+        category: "Session",
+        enabled: !!session()?.revert?.messageID,
+        slashName: "redo",
+        run: () => {
+          dialog.clear()
+          const messageID = session()?.revert?.messageID
+          if (!messageID) return
+          const message = messages().find((item) => item.role === "user" && item.id > messageID)
+          if (!message) {
+            void sdk.client.session.unrevert({
+              sessionID: route.sessionID,
+            })
+            prompt?.set({ input: "", parts: [] })
+            return
+          }
+          void sdk.client.session.revert({
+            sessionID: route.sessionID,
+            messageID: message.id,
+          })
+        },
+      },
       {
         name: "session.child.first",
         title: "Go to child session",
@@ -593,6 +803,20 @@ export function MinimalSession() {
         run: () => {
           if (!session()?.parentID) return false
           moveChild(-1)
+        },
+      },
+      {
+        name: "session.background",
+        title: "Background subagents",
+        category: "Session",
+        hidden: true,
+        run: () => {
+          if (foregroundTasks().length === 0) return false
+          void sdk.client.experimental.session.background({
+            sessionID: route.sessionID,
+            workspace: project.workspace.current(),
+          })
+          dialog.clear()
         },
       },
       {
