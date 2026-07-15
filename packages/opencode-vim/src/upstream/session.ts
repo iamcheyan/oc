@@ -18,6 +18,7 @@ export const sessionBindingCommands = [
   "session.sidebar.toggle",
   "session.toggle.conceal",
   "session.toggle.timestamps",
+  "session.background",
   "session.toggle.thinking",
   "session.toggle.actions",
   "session.toggle.scrollbar",
