@@ -22,6 +22,7 @@ export function applyMinimalModeDefaults(env: NodeJS.ProcessEnv = process.env) {
   env.OPENCODE_MINIMAL_SIDEBAR ??= MINIMAL_MODE_DEFAULTS.sidebarMode
   env.OPENCODE_MINIMAL_SCREEN_MODE ??= MINIMAL_MODE_DEFAULTS.screenMode
   env.OPENCODE_MINIMAL_DISABLE_UPDATE_CHECK ??= "1"
+  env.OPENCODE_PURE ??= "1"
   if (MINIMAL_MODE_DEFAULTS.footerHeight !== undefined) {
     env.OPENCODE_MINIMAL_FOOTER_HEIGHT ??= String(MINIMAL_MODE_DEFAULTS.footerHeight)
   }
