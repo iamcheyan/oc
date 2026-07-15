@@ -1,4 +1,3 @@
-import "./sdk/install-patches"
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import "@opencode-ai/core/global"
