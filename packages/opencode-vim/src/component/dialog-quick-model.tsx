@@ -3,7 +3,8 @@ import { useBindings } from "@tui/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
 import { useSync } from "@tui/context/sync"
 import { useForkTheme } from "@/util/theme"
-import { RGBA, TextAttributes } from "@opentui/core"
+import { RGBA, TextAttributes, type TextareaRenderable } from "@opentui/core"
+import type { DialogContext } from "@tui/ui/dialog"
 import {
   loadQuickModelConfig,
   saveQuickModelConfig,
@@ -15,7 +16,7 @@ import { isForcedFreeOnly, isFreeOpenCodeModel, isModelFree } from "@/config/mod
 const MAX_VISIBLE = 10
 const SLOTS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
-export function DialogQuickModel(props: { dialog: any; directory: string }) {
+export function DialogQuickModel(props: { dialog: DialogContext; directory: string }) {
   const { theme } = useForkTheme()
   const sync = useSync()
 
@@ -26,7 +27,7 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
   const [search, setSearch] = createSignal("")
   const [modelIndex, setModelIndex] = createSignal(0)
   const [status, setStatus] = createSignal<"idle" | "saved">("idle")
-  let searchInput: any
+  let searchInput: TextareaRenderable | undefined
 
   const freeOnly = createMemo(() => isForcedFreeOnly())
   const visibleSlotModel = (model: string) => {
@@ -47,7 +48,7 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
           key: `${provider.id}/${modelID}`,
           label: `${provider.id}/${modelID}`,
           provider: provider.name ?? provider.id,
-          name: (info as any)?.name ?? modelID,
+          name: info?.name ?? modelID,
         })
       }
     }
@@ -219,7 +220,7 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
           </text>
           <text fg={theme.textMuted}> — Search: </text>
           <input
-            ref={(r: any) => { searchInput = r }}
+            ref={(r: TextareaRenderable) => { searchInput = r }}
             value={search()}
             onInput={(val: string) => { setSearch(val); setModelIndex(0) }}
             onSubmit={() => {
