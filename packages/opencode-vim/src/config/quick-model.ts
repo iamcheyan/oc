@@ -1,7 +1,8 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import { createSignal } from "solid-js"
+import { parseJsonc } from "@/util/jsonc"
 
 export type QuickModelSlots = Record<string, string> // "1" -> "providerID/modelID"
 
@@ -44,28 +45,13 @@ function cleanDir(projectDir: string): string {
 function migrateLocalConfig(projectDir: string): QuickModelConfig {
   const localPath = path.join(cleanDir(projectDir), ".oc", CONFIG_FILENAME)
   if (!existsSync(localPath)) return { slots: {} }
-  try {
-    const raw = readFileSync(localPath, "utf-8")
-    const cleaned = raw
-      .replace(/\/\/.*$/gm, "")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/,\s*([\]}])/g, "$1")
-    const parsed = JSON.parse(cleaned)
-    if (parsed && typeof parsed === "object" && parsed.quick_model && typeof parsed.quick_model.slots === "object") {
-      const slots = parsed.quick_model.slots as Record<string, string>
-      const clean: QuickModelSlots = {}
-      for (const [k, v] of Object.entries(slots)) {
-        if (typeof v === "string") clean[k] = v
-      }
-      // Write to global location
-      const globalConfig = { slots: clean }
-      saveQuickModelConfig(projectDir, globalConfig)
-      // Delete local file to complete migration
-      try { require("node:fs").unlinkSync(localPath) } catch {}
-      return globalConfig
-    }
-  } catch {}
-  return { slots: {} }
+  const slots = readSlots(localPath)
+  if (!slots) return { slots: {} }
+  const globalConfig = { slots }
+  saveQuickModelConfig(projectDir, globalConfig)
+  // Delete local file to complete migration
+  try { unlinkSync(localPath) } catch {}
+  return globalConfig
 }
 
 export function loadQuickModelConfig(_projectDir?: string): QuickModelConfig {
@@ -78,23 +64,26 @@ export function loadQuickModelConfig(_projectDir?: string): QuickModelConfig {
     }
     return { slots: {} }
   }
+  return { slots: readSlots(globalPath) ?? {} }
+}
+
+function readSlots(filePath: string): QuickModelSlots | undefined {
   try {
-    const raw = readFileSync(globalPath, "utf-8")
-    const cleaned = raw
-      .replace(/\/\/.*$/gm, "")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/,\s*([\]}])/g, "$1")
-    const parsed = JSON.parse(cleaned)
-    if (parsed && typeof parsed === "object" && parsed.quick_model && typeof parsed.quick_model.slots === "object") {
-      const slots = parsed.quick_model.slots as Record<string, string>
-      const clean: QuickModelSlots = {}
-      for (const [k, v] of Object.entries(slots)) {
-        if (typeof v === "string") clean[k] = v
-      }
-      return { slots: clean }
-    }
-  } catch {}
-  return { slots: {} }
+    return extractSlots(parseJsonc(readFileSync(filePath, "utf-8")))
+  } catch {
+    return undefined
+  }
+}
+
+function extractSlots(parsed: unknown): QuickModelSlots | undefined {
+  if (!parsed || typeof parsed !== "object") return undefined
+  const root = parsed as { quick_model?: { slots?: Record<string, unknown> } }
+  if (!root.quick_model || typeof root.quick_model.slots !== "object" || !root.quick_model.slots) return undefined
+  const clean: QuickModelSlots = {}
+  for (const [k, v] of Object.entries(root.quick_model.slots)) {
+    if (typeof v === "string") clean[k] = v
+  }
+  return clean
 }
 
 export function saveQuickModelConfig(_projectDir?: string, config: QuickModelConfig = { slots: {} }): void {

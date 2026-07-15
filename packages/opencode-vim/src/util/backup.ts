@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs"
 import path from "node:path"
 import os from "node:os"
+import { stripJsonComments } from "./jsonc"
 
 export interface BackupResult {
   success: boolean
@@ -9,69 +10,22 @@ export interface BackupResult {
   error?: string
 }
 
-function stripJsonComments(json: string): string {
-  let out = ""
-  let inString = false
-  let inLineComment = false
-  let inBlockComment = false
-
-  for (let i = 0; i < json.length; i++) {
-    const char = json[i]
-    const next = json[i + 1]
-
-    if (inLineComment) {
-      if (char === "\n" || char === "\r") {
-        inLineComment = false
-        out += char
-      }
-      continue
-    }
-
-    if (inBlockComment) {
-      if (char === "*" && next === "/") {
-        inBlockComment = false
-        i++ // skip "/"
-      }
-      continue
-    }
-
-    if (inString) {
-      if (char === '"' && json[i - 1] !== "\\") {
-        inString = false
-      }
-      out += char
-      continue
-    }
-
-    if (char === '"') {
-      inString = true
-      out += char
-      continue
-    }
-
-    if (char === "/" && next === "/") {
-      inLineComment = true
-      i++
-      continue
-    }
-
-    if (char === "/" && next === "*") {
-      inBlockComment = true
-      i++
-      continue
-    }
-
-    out += char
-  }
-
-  return out.replace(/,\s*([\]}])/g, "$1")
+type BackupPayload = {
+  version: number
+  files: Record<string, string>
+  skills?: Record<string, string>
 }
 
-function deepMerge(target: any, source: any): any {
+function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  return String(e)
+}
+
+function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
   if (typeof target !== "object" || target === null) return source
   if (typeof source !== "object" || source === null) return target
 
-  const result = { ...target }
+  const result: Record<string, unknown> = { ...target }
   for (const key of Object.keys(source)) {
     const sourceValue = source[key]
     const targetValue = result[key]
@@ -84,7 +38,7 @@ function deepMerge(target: any, source: any): any {
       typeof targetValue === "object" &&
       targetValue !== null
     ) {
-      result[key] = deepMerge(targetValue, sourceValue)
+      result[key] = deepMerge(targetValue as Record<string, unknown>, sourceValue as Record<string, unknown>)
     } else {
       result[key] = sourceValue
     }
@@ -112,7 +66,7 @@ function maskApiKeyString(val: string): string {
   }
 }
 
-function maskSensitivePropertiesRecursive(obj: any): any {
+function maskSensitivePropertiesRecursive(obj: unknown): unknown {
   if (typeof obj !== "object" || obj === null) {
     return obj
   }
@@ -121,12 +75,11 @@ function maskSensitivePropertiesRecursive(obj: any): any {
     return obj.map(maskSensitivePropertiesRecursive)
   }
 
-  const result: any = {}
+  const result: Record<string, unknown> = {}
   const sensitiveRegex = /api_?key|secret|token|password/i
   const rawKeyRegex = /^(tp|sk)-[a-zA-Z0-9]{20,}$/
 
-  for (const key of Object.keys(obj)) {
-    const value = obj[key]
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     if (typeof value === "string" && (sensitiveRegex.test(key) || rawKeyRegex.test(value.trim()))) {
       result[key] = maskApiKeyString(value)
     } else {
@@ -178,7 +131,7 @@ export function performConfigBackup(projectDir: string): BackupResult {
       "tui.jsonc",
     ]
 
-    let mergedConfig: any = {}
+    let mergedConfig: Record<string, unknown> = {}
     const mergedFiles: string[] = []
 
     for (const folder of searchFolders) {
@@ -190,7 +143,7 @@ export function performConfigBackup(projectDir: string): BackupResult {
             const raw = readFileSync(fullPath, "utf-8")
             const cleaned = stripJsonComments(raw)
             if (cleaned.trim()) {
-              const parsed = JSON.parse(cleaned)
+              const parsed = JSON.parse(cleaned) as Record<string, unknown>
               mergedConfig = deepMerge(mergedConfig, parsed)
               mergedFiles.push(fullPath)
             }
@@ -224,11 +177,11 @@ export function performConfigBackup(projectDir: string): BackupResult {
       mergedFiles,
       destFile,
     }
-  } catch (e: any) {
+  } catch (e) {
     return {
       success: false,
       mergedFiles: [],
-      error: e?.message || String(e),
+      error: errorMessage(e),
     }
   }
 }
@@ -325,7 +278,7 @@ export function performFullBackup(destPath?: string, workspaceDir?: string): Bac
         const content = readFileSync(entry.absolutePath, "utf-8")
         backupPayload.files[entry.relativePath] = content
         backedUpFiles.push(entry.absolutePath)
-      } catch (e) {
+      } catch {
         // Skip
       }
     }
@@ -393,11 +346,11 @@ export function performFullBackup(destPath?: string, workspaceDir?: string): Bac
       mergedFiles: backedUpFiles,
       destFile: finalDestFile
     }
-  } catch (e: any) {
+  } catch (e) {
     return {
       success: false,
       mergedFiles: [],
-      error: e?.message || String(e)
+      error: errorMessage(e)
     }
   }
 }
@@ -415,7 +368,7 @@ export function performFullRestore(backupFilePath: string, workspaceDir?: string
     }
 
     const raw = readFileSync(resolvedBackupPath, "utf-8")
-    const payload = JSON.parse(raw)
+    const payload = JSON.parse(raw) as BackupPayload
 
     if (!payload || payload.version !== 1 || !payload.files) {
       return { success: false, error: "Invalid backup file format or version mismatch." }
@@ -477,7 +430,7 @@ export function performFullRestore(backupFilePath: string, workspaceDir?: string
       if (!existsSync(targetParent)) {
         mkdirSync(targetParent, { recursive: true })
       }
-      writeFileSync(targetPath, content as string, "utf-8")
+      writeFileSync(targetPath, content, "utf-8")
     }
 
     if (payload.skills) {
@@ -487,7 +440,7 @@ export function performFullRestore(backupFilePath: string, workspaceDir?: string
         if (!existsSync(globalSkillParent)) {
           mkdirSync(globalSkillParent, { recursive: true })
         }
-        writeFileSync(globalSkillPath, content as string, "utf-8")
+        writeFileSync(globalSkillPath, content, "utf-8")
 
         if (workspaceDir) {
           let cleanWorkspaceDir = workspaceDir.trim()
@@ -499,7 +452,7 @@ export function performFullRestore(backupFilePath: string, workspaceDir?: string
           if (!existsSync(workspaceSkillParent)) {
             mkdirSync(workspaceSkillParent, { recursive: true })
           }
-          writeFileSync(workspaceSkillPath, content as string, "utf-8")
+          writeFileSync(workspaceSkillPath, content, "utf-8")
         }
       }
     }
@@ -508,10 +461,10 @@ export function performFullRestore(backupFilePath: string, workspaceDir?: string
       success: true,
       safetyBackup: safetyBackupFile
     }
-  } catch (e: any) {
+  } catch (e) {
     return {
       success: false,
-      error: e?.message || String(e)
+      error: errorMessage(e)
     }
   }
 }

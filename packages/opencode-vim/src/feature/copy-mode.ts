@@ -3,6 +3,25 @@ import type { ScrollBoxRenderable } from "@opentui/core"
 import type { Part } from "@opencode-ai/sdk/v2"
 import { displayCharAt } from "@opencode/cli/cmd/prompt-display"
 
+// Structural shape of renderable nodes we traverse while copying. Covers the
+// union of Box/Text/Gutter renderables accessed here; some members are internal.
+type CopyNode = {
+  id?: string
+  y: number
+  height?: number
+  plainText?: string
+  lineInfo?: {
+    lineSources?: number[]
+    lineWraps?: number[]
+    lineStartCols?: number[]
+    lineWidthCols?: number[]
+  }
+  gutter?: { calculateWidth: () => number }
+  _positionType?: string
+  _y?: number
+  getChildren?: () => CopyNode[]
+}
+
 export type CopyRow = {
   key: string
   id: string
@@ -40,8 +59,8 @@ export function createCopyMode(input: {
   function collectNodes() {
     const scroll = input.scroll()
     if (!scroll) return []
-    const result: any[] = []
-    const visit = (node: any) => {
+    const result: CopyNode[] = []
+    const visit = (node: CopyNode) => {
       if (!node) return
       if (node.id) result.push(node)
       for (const child of node.getChildren?.() ?? []) {
@@ -49,7 +68,7 @@ export function createCopyMode(input: {
         visit(child)
       }
     }
-    for (const child of scroll.getChildren()) visit(child)
+    for (const child of scroll.getChildren() as unknown as CopyNode[]) visit(child)
     return result.toSorted((a, b) => a.y - b.y)
   }
 
@@ -92,7 +111,7 @@ export function createCopyMode(input: {
         const m = meta.get(child.id)
         if (!m) return []
 
-        const total = Math.max(1, Math.floor(child.height))
+        const total = Math.max(1, Math.floor(child.height ?? 0))
         const start = 0
         const end = total
         const baseCol = m.kind === "user" ? 1 : 0
@@ -111,10 +130,10 @@ export function createCopyMode(input: {
       })
   }
 
-  function findRenderables(node: any, y = 0, gutter = 0): { node: any; y: number; gutter: number }[] {
+  function findRenderables(node: CopyNode, y = 0, gutter = 0): { node: CopyNode; y: number; gutter: number }[] {
     if (node.lineInfo && node.plainText !== undefined) return [{ node, y, gutter }]
     const width = gutter || ("gutter" in node && node.gutter ? node.gutter.calculateWidth() : 0)
-    const result: { node: any; y: number; gutter: number }[] = []
+    const result: { node: CopyNode; y: number; gutter: number }[] = []
     for (const child of node.getChildren?.() ?? []) {
       if (child._positionType === "absolute") continue
       result.push(...findRenderables(child, y + Math.floor(child._y ?? 0), width))
@@ -140,12 +159,12 @@ export function createCopyMode(input: {
     return text.slice(begin, end)
   }
 
-  function childById(id: string, cache?: Map<string, any>) {
+  function childById(id: string, cache?: Map<string, CopyNode>) {
     if (cache) return cache.get(id)
     return collectNodes().find((c) => c.id === id)
   }
 
-  function copyLine(row: CopyRow, child: any): { text: string; col: number } {
+  function copyLine(row: CopyRow, child: CopyNode): { text: string; col: number } {
     const entries = findRenderables(child)
     if (!entries.length) return { text: "", col: 0 }
     let match = entries[0]
@@ -177,14 +196,14 @@ export function createCopyMode(input: {
     return { text: lines[local] ?? "", col: match.gutter }
   }
 
-  function rowText(row?: CopyRow, cache?: Map<string, any>) {
+  function rowText(row?: CopyRow, cache?: Map<string, CopyNode>) {
     if (!row) return ""
     const child = childById(row.id, cache)
     if (!child) return ""
     return copyLine(row, child).text
   }
 
-  function copyMin(row?: CopyRow, cache?: Map<string, any>): number {
+  function copyMin(row?: CopyRow, cache?: Map<string, CopyNode>): number {
     if (!row) return 0
     const child = childById(row.id, cache)
     if (!child) return row.col
@@ -192,7 +211,7 @@ export function createCopyMode(input: {
     return row.col + line.col
   }
 
-  function rowPadded(row: CopyRow, cache?: Map<string, any>) {
+  function rowPadded(row: CopyRow, cache?: Map<string, CopyNode>) {
     return " ".repeat(copyMin(row, cache)) + rowText(row, cache)
   }
 

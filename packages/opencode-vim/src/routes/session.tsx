@@ -36,7 +36,7 @@ import { DialogForkFromTimeline } from "@tui/routes/session/dialog-fork-from-tim
 import { DialogSessionRename } from "@tui/component/dialog-session-rename"
 import { DialogRetryAction } from "@tui/component/dialog-retry-action"
 import { DialogExportOptions } from "@tui/ui/dialog-export-options"
-import { RGBA, TextAttributes } from "@opentui/core"
+import { RGBA, TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 
 import { Locale } from "@/util/locale"
 import {
@@ -75,7 +75,9 @@ import { loadVimConfig, saveVimConfig } from "@/config/vim"
 import type {
   AssistantMessage,
   Part,
+  ReasoningPart,
   SessionStatus,
+  TextPart,
   ToolPart,
   UserMessage as UserMessageType,
 } from "@opencode-ai/sdk/v2"
@@ -452,14 +454,14 @@ function CompactAssistantMessage(props: {
         {(part, index) => (
           <Switch>
             <Match when={part.type === "text"}>
-              <CompactTextPart part={part as any} />
+              <CompactTextPart part={part as TextPart} />
             </Match>
             <Match when={part.type === "reasoning"}>
-              <CompactReasoningPart part={part as any} />
+              <CompactReasoningPart part={part as ReasoningPart} />
             </Match>
-            <Match when={part.type === "tool" && (!props.hideTools || isWriteTool((part as any).tool))}>
-              <box id={`tool-${(part as any).id}`}>
-                <SimpleTool part={part as any} />
+            <Match when={part.type === "tool" && (!props.hideTools || isWriteTool((part as ToolPart).tool))}>
+              <box id={`tool-${(part as ToolPart).id}`}>
+                <SimpleTool part={part as ToolPart} />
               </box>
             </Match>
           </Switch>
@@ -675,7 +677,7 @@ export function MinimalSession() {
   const [showScrollbar, setShowScrollbar] = kv.signal("minimal_session_scrollbar", false)
 
   const providers = createMemo(() => Model.index(sync.data.provider))
-  let scroll: any
+  let scroll: ScrollBoxRenderable | undefined
   let prompt: MinimalPromptRef | undefined
   let seeded = false
   const vimMode = useVimMode()
@@ -779,8 +781,9 @@ export function MinimalSession() {
   }
 
   function findNextVisibleMessage(direction: "next" | "prev") {
-    if (!scroll) return
-    const children = scroll
+    const currentScroll = scroll
+    if (!currentScroll) return
+    const children = currentScroll
       .getChildren()
       .filter((child: { id?: string; y: number }) => {
         if (!child.id) return false
@@ -790,8 +793,8 @@ export function MinimalSession() {
         return parts?.some((part) => part.type === "text" && !part.synthetic && !part.ignored)
       })
       .sort((a: { y: number }, b: { y: number }) => a.y - b.y)
-    if (direction === "next") return children.find((child: { y: number }) => child.y > scroll.y + 10)?.id
-    return children.toReversed().find((child: { y: number }) => child.y < scroll.y - 10)?.id
+    if (direction === "next") return children.find((child: { y: number }) => child.y > currentScroll.y + 10)?.id
+    return children.toReversed().find((child: { y: number }) => child.y < currentScroll.y - 10)?.id
   }
 
   function scrollToMessageBoundary(direction: "next" | "prev") {
