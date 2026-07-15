@@ -904,12 +904,7 @@ export function useVimSession(
     }, 0)
   }
 
-  const submitDraftOrFocusPrompt = () => {
-    const prompt = promptRef()
-    if (prompt && (prompt.current.input !== "" || prompt.current.parts.length > 0)) {
-      prompt.submit()
-      return true
-    }
+  const focusPromptFromNormal = () => {
     focusPrompt()
     return true
   }
@@ -1167,19 +1162,6 @@ export function useVimSession(
     if (!copyMode.active()) return false
     if (dialog.stack.length > 0) return false
     if (renderer.currentFocusedEditor !== null) return false
-    const focused = renderer.currentFocusedRenderable
-    if (focused) {
-      const name = focused.constructor?.name
-      if (
-        name === "TextareaRenderable" ||
-        name === "InputRenderable" ||
-        "plainText" in focused ||
-        typeof (focused as any).insertText === "function" ||
-        typeof (focused as any).setText === "function"
-      ) {
-        return false
-      }
-    }
     return true
   }
 
@@ -1343,14 +1325,34 @@ export function useVimSession(
         cmd: () => focusPrompt(":"),
       },
       {
+        key: "i",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "shift+i",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "o",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "shift+o",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
         key: "return",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => submitDraftOrFocusPrompt(),
+        cmd: () => focusPromptFromNormal(),
       },
       {
         key: "enter",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => submitDraftOrFocusPrompt(),
+        cmd: () => focusPromptFromNormal(),
       },
       {
         key: "escape",
@@ -1426,12 +1428,7 @@ export function useVimHome(
     }, 0)
   }
 
-  const submitDraftOrFocusPrompt = () => {
-    const prompt = promptRef()
-    if (prompt && (prompt.current.input !== "" || prompt.current.parts.length > 0)) {
-      prompt.submit()
-      return true
-    }
+  const focusPromptFromNormal = () => {
     focusPrompt()
     return true
   }
@@ -1631,19 +1628,6 @@ export function useVimHome(
     if (!isNormal()) return false
     if (dialog.stack.length > 0) return false
     if (renderer.currentFocusedEditor !== null) return false
-    const focused = renderer.currentFocusedRenderable
-    if (focused) {
-      const name = focused.constructor?.name
-      if (
-        name === "TextareaRenderable" ||
-        name === "InputRenderable" ||
-        "plainText" in focused ||
-        typeof (focused as any).insertText === "function" ||
-        typeof (focused as any).setText === "function"
-      ) {
-        return false
-      }
-    }
     return true
   }
 
@@ -1720,14 +1704,34 @@ export function useVimHome(
         cmd: () => focusPrompt(":"),
       },
       {
+        key: "i",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "shift+i",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "o",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "shift+o",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
         key: "return",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => submitDraftOrFocusPrompt(),
+        cmd: () => focusPromptFromNormal(),
       },
       {
         key: "enter",
         when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
-        cmd: () => submitDraftOrFocusPrompt(),
+        cmd: () => focusPromptFromNormal(),
       },
       {
         key: "escape",
