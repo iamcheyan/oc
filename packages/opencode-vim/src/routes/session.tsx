@@ -17,7 +17,7 @@ import { useDirectory } from "@tui/context/directory"
 import { useRoute, useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { useTuiPaths } from "@tui/context/runtime"
-import { MinimalRendererBackground, selectedForeground, useForkTheme } from "@/util/theme"
+import { MinimalRendererBackground, useForkTheme } from "@/util/theme"
 import { useProject } from "@tui/context/project"
 import { useDialog } from "@tui/ui/dialog"
 import { DialogConfirm } from "@tui/ui/dialog-confirm"
@@ -284,37 +284,24 @@ function CompactUserMessage(props: {
   const compaction = createMemo(() => props.parts.find((part) => part.type === "compaction"))
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
   const color = createMemo(() => local.agent.color(props.message.agent))
-  const queuedFg = createMemo(() => selectedForeground(theme, color()))
-  const metadataVisible = createMemo(() => queued() || ctx.showTimestamps())
   return (
     <>
       <Show when={text() || files().length}>
         <box
           id={props.message.id}
-          border={["left"]}
-          borderColor={color()}
           marginTop={props.index === 0 ? 0 : 1}
-          paddingLeft={2}
-          paddingTop={1}
-          paddingBottom={1}
-          backgroundColor={theme.backgroundPanel}
           onMouseUp={props.onMouseUp}
         >
           <Show when={text()}>
-            <text fg={theme.text}>{text()}</text>
+            <text fg={color()}>{text()}</text>
           </Show>
           <Show when={files().length}>
-            <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
+            <box flexDirection="row" marginTop={1} gap={1} flexWrap="wrap">
               <For each={files()}>
                 {(file) => {
                   const directory = file.mime === "application/x-directory"
                   return (
-                    <text fg={theme.text}>
-                      <span style={{ bg: theme.secondary, fg: theme.background }}>
-                        {directory ? " Directory " : " File "}
-                      </span>
-                      <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
-                    </text>
+                    <text fg={theme.textMuted}>{directory ? "Directory" : "File"} {file.filename}</text>
                   )
                 }}
               </For>
@@ -333,19 +320,15 @@ function CompactUserMessage(props: {
             }
           >
             <text fg={theme.textMuted}>
-              <span style={{ bg: color(), fg: queuedFg(), bold: true }}> QUEUED </span>
+              <span style={{ fg: color(), bold: true }}>QUEUED</span>
             </text>
           </Show>
         </box>
       </Show>
       <Show when={compaction()}>
-        <box
-          marginTop={1}
-          border={["top"]}
-          title=" Compaction "
-          titleAlignment="center"
-          borderColor={theme.borderActive}
-        />
+        <box marginTop={1}>
+          <text fg={theme.textMuted}>--- Compaction ---</text>
+        </box>
       </Show>
     </>
   )
@@ -481,7 +464,7 @@ function CompactAssistantMessage(props: {
         )}
       </For>
       <Show when={props.parts.some((part) => part.type === "tool" && part.tool === "task")}>
-        <box paddingTop={1} paddingLeft={3}>
+        <box marginTop={1}>
           <text fg={theme.text}>
             {childShortcut()}
             <span style={{ fg: theme.textMuted }}> view subagents</span>
@@ -554,30 +537,28 @@ function RevertPanel(props: {
   const { theme } = useForkTheme()
   const redoShortcut = useCommandShortcut("session.redo")
   return (
-    <box marginTop={1} border={["left"]} borderColor={theme.backgroundPanel}>
-      <box paddingTop={1} paddingBottom={1} paddingLeft={2} backgroundColor={theme.backgroundPanel}>
-        <text fg={theme.textMuted}>{props.count} message reverted</text>
-        <text fg={theme.textMuted} onMouseUp={props.onRedo}>
-          <span style={{ fg: theme.text }}>{redoShortcut()}</span> or /redo to restore
-        </text>
-        <Show when={props.files.length}>
-          <box marginTop={1}>
-            <For each={props.files}>
-              {(file) => (
-                <text fg={theme.text}>
-                  {file.filename}
-                  <Show when={file.additions > 0}>
-                    <span style={{ fg: theme.diffAdded }}> +{file.additions}</span>
-                  </Show>
-                  <Show when={file.deletions > 0}>
-                    <span style={{ fg: theme.diffRemoved }}> -{file.deletions}</span>
-                  </Show>
-                </text>
-              )}
-            </For>
-          </box>
-        </Show>
-      </box>
+    <box marginTop={1}>
+      <text fg={theme.textMuted}>{props.count} message reverted</text>
+      <text fg={theme.textMuted} onMouseUp={props.onRedo}>
+        <span style={{ fg: theme.text }}>{redoShortcut()}</span> or /redo to restore
+      </text>
+      <Show when={props.files.length}>
+        <box marginTop={1}>
+          <For each={props.files}>
+            {(file) => (
+              <text fg={theme.text}>
+                {file.filename}
+                <Show when={file.additions > 0}>
+                  <span style={{ fg: theme.diffAdded }}> +{file.additions}</span>
+                </Show>
+                <Show when={file.deletions > 0}>
+                  <span style={{ fg: theme.diffRemoved }}> -{file.deletions}</span>
+                </Show>
+              </text>
+            )}
+          </For>
+        </box>
+      </Show>
     </box>
   )
 }
