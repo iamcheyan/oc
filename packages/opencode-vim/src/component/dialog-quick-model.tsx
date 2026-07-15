@@ -10,6 +10,7 @@ import {
   formatSlotModel,
   type QuickModelConfig,
 } from "@/config/quick-model"
+import { isForcedFreeOnly, isFreeOpenCodeModel, isModelFree } from "@/config/model-filter"
 
 const MAX_VISIBLE = 10
 const SLOTS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
@@ -27,12 +28,21 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
   const [status, setStatus] = createSignal<"idle" | "saved">("idle")
   let searchInput: any
 
+  const freeOnly = createMemo(() => isForcedFreeOnly())
+  const visibleSlotModel = (model: string) => {
+    if (!model) return ""
+    const idx = model.indexOf("/")
+    if (idx === -1) return ""
+    if (freeOnly() && !isModelFree(sync.data.provider, { providerID: model.slice(0, idx), modelID: model.slice(idx + 1) })) return ""
+    return model
+  }
   const allModels = createMemo(() => {
     const providers = sync.data.provider
     const result: { key: string; label: string; provider: string; name: string }[] = []
     for (const provider of providers) {
       for (const modelID of Object.keys(provider.models)) {
         const info = provider.models[modelID]
+        if (freeOnly() && !isFreeOpenCodeModel(provider, info)) continue
         result.push({
           key: `${provider.id}/${modelID}`,
           label: `${provider.id}/${modelID}`,
@@ -168,7 +178,7 @@ export function DialogQuickModel(props: { dialog: any; directory: string }) {
         <box width="100%" flexDirection="column">
           <For each={SLOTS}>
             {(slot, i) => {
-              const modelStr = config().slots[slot] || ""
+              const modelStr = visibleSlotModel(config().slots[slot] || "")
               const display = modelStr ? formatSlotModel(modelStr) : "(not set)"
               const isSelected = createMemo(() => selectedSlot() === i())
               return (

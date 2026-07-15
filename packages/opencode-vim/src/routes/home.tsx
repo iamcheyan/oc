@@ -17,6 +17,8 @@ import { AutocompleteHostProvider } from "@/context/autocomplete-host"
 import { MinimalHomePromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
 import { getLeaderMenu, useVimHome, useVimMode } from "@/feature/vim-mode"
 import { loadVimConfig, saveVimConfig } from "@/config/vim"
+import { ForkModelCommand } from "@/component/dialog-model"
+import { ModelFreeGuard } from "@/component/model-free-guard"
 
 let seededHomePrompt = false
 
@@ -204,6 +206,8 @@ export function MinimalHome() {
 
   return (
     <AutocompleteHostProvider>
+      <ModelFreeGuard />
+      <ForkModelCommand />
       <MinimalRendererBackground />
       <box flexGrow={1} minHeight={0} flexDirection="column">
         <MinimalStatusBar pureMode={pureMode()} />

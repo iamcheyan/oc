@@ -65,6 +65,8 @@ import { openEditor } from "@tui/editor"
 import { AutocompleteHostProvider } from "@/context/autocomplete-host"
 import { MinimalSessionPromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
 import { Sidebar } from "@/component/sidebar"
+import { ForkModelCommand } from "@/component/dialog-model"
+import { ModelFreeGuard } from "@/component/model-free-guard"
 
 import { useBindings, useCommandShortcut } from "@tui/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
@@ -1437,6 +1439,8 @@ const sidebarVisible = createMemo(() => kv.get("minimal_sidebar_visible", false)
 
   return (
     <AutocompleteHostProvider>
+      <ModelFreeGuard />
+      <ForkModelCommand />
       <MinimalRendererBackground />
       <SessionContext.Provider value={contextValue}>
           <box flexDirection="column" flexGrow={1} minHeight={0} position="relative">
