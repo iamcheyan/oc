@@ -66,6 +66,7 @@ import { useVimMode } from "@/feature/vim-mode"
 import { getLeaderMenu, isSeparator, type LeaderGroup, type LeaderLeaf, type LeaderSeparator } from "@/feature/leader-menu"
 import { loadVimConfig } from "@/config/vim"
 import { loadQuickModelConfig, formatSlotModel, quickModelVersion } from "@/config/quick-model"
+import { isForcedFreeOnly, isModelFree } from "@/config/model-filter"
 
 export type PromptProps = {
   sessionID?: string
@@ -154,6 +155,7 @@ export function Prompt(props: PromptProps) {
   const vimMode = useVimMode()
   const directory = useDirectory()
   const kv = useKV()
+  const sync = useSync()
   const vimConfig = createMemo(() => loadVimConfig(directory()))
   const vimHidePrompt = createMemo(() => kv.get("minimal_vim_hide_prompt") ?? vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => kv.get("minimal_vim_auto_resume") ?? vimConfig().autoResume ?? false)
@@ -162,10 +164,19 @@ export function Prompt(props: PromptProps) {
     // Read version so this memo re-runs after the config is saved from the dialog.
     quickModelVersion()
     const cfg = loadQuickModelConfig(directory())
-    return ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => ({
-      key: k,
-      model: cfg.slots[k] ? formatSlotModel(cfg.slots[k]) : "",
-    }))
+    return ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => {
+      const model = cfg.slots[k]
+      const idx = model?.indexOf("/") ?? -1
+      const visible =
+        model &&
+        idx !== -1 &&
+        (!isForcedFreeOnly() ||
+          isModelFree(sync.data.provider, { providerID: model.slice(0, idx), modelID: model.slice(idx + 1) }))
+      return {
+        key: k,
+        model: visible ? formatSlotModel(model) : "",
+      }
+    })
   })
   const isLeaderActive = createMemo(() => {
     if (!vimMode.isNormal()) return false
@@ -273,7 +284,6 @@ export function Prompt(props: PromptProps) {
   const editor = useEditorContext()
   const route = useRoute()
   const project = useProject()
-  const sync = useSync()
   const tuiConfig = useTuiConfig()
   const dialog = useDialog()
   const toast = useToast()
@@ -533,7 +543,7 @@ export function Prompt(props: PromptProps) {
       if (msg.agent && isPrimaryAgent) {
         // Keep command line --agent if specified.
         if (!args.agent) local.agent.set(msg.agent)
-        if (msg.model) {
+        if (msg.model && (!isForcedFreeOnly() || isModelFree(sync.data.provider, msg.model))) {
           local.model.set(msg.model)
           local.model.variant.set(msg.model.variant)
         }

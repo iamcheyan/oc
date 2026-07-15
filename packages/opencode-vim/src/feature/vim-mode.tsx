@@ -23,7 +23,10 @@ import { performConfigBackup, performFullBackup, performFullRestore } from "../u
 import { loadConfig, getTestableProviders, testProvider, testAuth, type ProviderTestEntry, type ProviderTestResult, colors, getColumnWidthsByTerminalWidth, formatRow, type ColumnWidths } from "../util/api-test"
 import { loadQuickModelConfig, getSlotModel } from "@/config/quick-model"
 import { DialogQuickModel } from "@/component/dialog-quick-model"
+import { DialogForkModel } from "@/component/dialog-model"
 import { useLocal } from "@tui/context/local"
+import { isForcedFreeOnly, isModelFree } from "@/config/model-filter"
+import { useSync } from "@tui/context/sync"
 
 
 export type { LeaderGroup, LeaderLeaf, LeaderSeparator, LeaderAction }
@@ -885,6 +888,7 @@ export function useVimSession(
   const renderer = useRenderer()
   const keymap = useOpencodeKeymap()
   const local = useLocal()
+  const sync = useSync()
   let wasNormal: boolean | undefined = undefined
   let spaceActive = false
 
@@ -1071,6 +1075,10 @@ export function useVimSession(
         dialog.replace(() => <DialogTestAPI dialog={dialog} />)
         return
       }
+      if (entry.action === "command" && entry.command === "model.list") {
+        dialog.replace(() => <DialogForkModel />)
+        return
+      }
       if (entry.action === "lazygit") {
         closeLeaderMenu()
         queueMicrotask(() => {
@@ -1129,6 +1137,7 @@ export function useVimSession(
       const debugMsg = `[quick-model] key=${key} slots=${JSON.stringify(cfg.slots)} model=${JSON.stringify(model)}\n`
       try { require("node:fs").appendFileSync("/tmp/quick-model-debug.log", debugMsg) } catch {}
       if (!model) return
+      if (isForcedFreeOnly() && !isModelFree(sync.data.provider, model)) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
     })
     return true
@@ -1411,6 +1420,7 @@ export function useVimHome(
   const renderer = useRenderer()
   const keymap = useOpencodeKeymap()
   const local = useLocal()
+  const sync = useSync()
 
   const selectableItems = createMemo(() => {
     const group = menu().find((item) => item.key === leaderGroup())
@@ -1569,6 +1579,10 @@ export function useVimHome(
         dialog.replace(() => <DialogTestAPI dialog={dialog} />)
         return
       }
+      if ((entry.action === "command" || !entry.action) && entry.command === "model.list") {
+        dialog.replace(() => <DialogForkModel />)
+        return
+      }
       if (entry.action === "lazygit") {
         runLazyGit()
         return
@@ -1596,6 +1610,7 @@ export function useVimHome(
       const debugMsg = `[quick-model-home] key=${key} slots=${JSON.stringify(cfg.slots)} model=${JSON.stringify(model)}\n`
       try { require("node:fs").appendFileSync("/tmp/quick-model-debug.log", debugMsg) } catch {}
       if (!model) return
+      if (isForcedFreeOnly() && !isModelFree(sync.data.provider, model)) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
     })
     return true
