@@ -1,17 +1,20 @@
-import { createMemo, Show } from "solid-js"
+import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js"
 import type { JSX } from "@opentui/solid"
 import { usePluginRuntime } from "@tui/plugin/runtime"
 import { useDirectory } from "@tui/context/directory"
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
 import { selectedForeground, useForkTheme } from "@/util/theme"
-import { TextAttributes, RGBA } from "@opentui/core"
-import type { AssistantMessage } from "@opencode-ai/sdk/v2"
+import { TextAttributes } from "@opentui/core"
+import type { AssistantMessage, SessionStatus } from "@opencode-ai/sdk/v2"
 import { Locale } from "@/util/locale"
 import { useVimMode } from "@/feature/vim-mode"
 import { useThinkingMode } from "@tui/context/thinking"
+import { formatDuration } from "@tui/util/format"
 import { Prompt, type PromptRef } from "@/component/prompt"
 import type { LeaderGroup } from "@/feature/leader-menu"
+
+type RetryStatus = Extract<SessionStatus, { type: "retry" }>
 
 export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean }) {
   const local = useLocal()
@@ -21,16 +24,47 @@ export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean
   const vimMode = useVimMode()
   const thinking = useThinkingMode()
   const status = createMemo(() => {
-    if (!props.sessionID) return { type: "idle" }
-    return sync.data.session_status?.[props.sessionID] ?? { type: "idle" }
+    if (!props.sessionID) return { type: "idle" as const }
+    return sync.data.session_status?.[props.sessionID] ?? { type: "idle" as const }
   })
+  const retry = createMemo(() => {
+    const current = status()
+    if (current.type !== "retry") return
+    return current as RetryStatus
+  })
+  const [retrySeconds, setRetrySeconds] = createSignal(0)
 
   const agentLabel = createMemo(() =>
     local.agent.current() ? Locale.titlecase(local.agent.current()!.name) : "Agent",
   )
   const modeIsNormal = createMemo(() => vimMode.isNormal())
   const modeBackground = createMemo(() => (modeIsNormal() ? theme.success : theme.primary))
-  const modeForeground = createMemo(() => (modeIsNormal() ? RGBA.fromInts(0, 0, 0) : selectedForeground(theme, theme.primary)))
+  const modeForeground = createMemo(() => selectedForeground(theme, modeBackground()))
+  const retryMessage = createMemo(() => {
+    const current = retry()
+    if (!current) return
+    if (current.message.includes("exceeded your current quota") && current.message.includes("gemini")) {
+      return "gemini is way too hot right now"
+    }
+    if (current.message.length > 80) return current.message.slice(0, 80) + "..."
+    return current.message
+  })
+  const retryText = createMemo(() => {
+    const current = retry()
+    const message = retryMessage()
+    if (!current || !message) return
+    const duration = formatDuration(retrySeconds())
+    return `${message} [retrying ${duration ? `in ${duration} ` : ""}attempt #${current.attempt}]`
+  })
+
+  onMount(() => {
+    const timer = setInterval(() => {
+      const next = retry()?.next
+      if (next) setRetrySeconds(Math.max(0, Math.round((next - Date.now()) / 1000)))
+    }, 1000)
+
+    onCleanup(() => clearInterval(timer))
+  })
 
   return (
     <box flexShrink={0} width="100%" flexDirection="row" justifyContent="space-between">
@@ -45,6 +79,14 @@ export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean
           <Show when={local.model.variant.current()}>
             <span style={{ fg: theme.textMuted }}> · </span>
             <span style={{ fg: theme.warning }}>{local.model.variant.current()}</span>
+          </Show>
+          <Show when={retryText()}>
+            {(text) => (
+              <>
+                <span style={{ fg: theme.textMuted }}> · </span>
+                <span style={{ fg: theme.error }}>{text()}</span>
+              </>
+            )}
           </Show>
         </text>
       </box>
