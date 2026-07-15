@@ -15,7 +15,7 @@ declare global {
 
 export function installMinimalRootComponents(target: typeof globalThis = globalThis) {
   installCjkSafeOverlayPatch()
-  ;(target as any).OPENCODE_TUI_ROOT_COMPONENTS = {
+  target.OPENCODE_TUI_ROOT_COMPONENTS = {
     Home: MinimalHome,
     Session: MinimalSession,
   }

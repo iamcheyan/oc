@@ -709,8 +709,8 @@ export function Prompt(props: PromptProps) {
         category: "Prompt",
         slashName: "skills",
         run: () => {
-          const skillFilter = (globalThis as { __SKILL_FILTER__?: string }).__SKILL_FILTER__
-          delete (globalThis as { __SKILL_FILTER__?: string }).__SKILL_FILTER__
+          const skillFilter = globalThis.__SKILL_FILTER__
+          delete globalThis.__SKILL_FILTER__
           dialog.replace(() => (
             <DialogSkill
               initialFilter={skillFilter}

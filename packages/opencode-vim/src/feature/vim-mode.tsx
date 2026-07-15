@@ -4,7 +4,7 @@ import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
 import { useKV } from "@tui/context/kv"
 import { useForkTheme } from "@/util/theme"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { TextAttributes, RGBA } from "@opentui/core"
+import { TextAttributes, RGBA, type ScrollBoxRenderable } from "@opentui/core"
 import type { MinimalPromptRef } from "@/component/prompt"
 import { useDirectory } from "@tui/context/directory"
 import { existsSync, statSync } from "node:fs"
@@ -27,10 +27,15 @@ import { DialogForkModel } from "@/component/dialog-model"
 import { useLocal } from "@tui/context/local"
 import { isForcedFreeOnly, isModelFree } from "@/config/model-filter"
 import { useSync } from "@tui/context/sync"
+import type { DialogContext } from "@tui/ui/dialog"
 
 
 export type { LeaderGroup, LeaderLeaf, LeaderSeparator, LeaderAction }
 export { isSeparator, getLeaderMenu }
+
+declare global {
+  var __SKILL_FILTER__: string | undefined
+}
 
 const [isNormal, setIsNormal] = createSignal(false)
 const [isLeaderActive, setIsLeaderActive] = createSignal(false)
@@ -56,6 +61,11 @@ export function useVimMode() {
   }
 }
 
+function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  return String(e)
+}
+
 const WHITE_BOX_BORDER = {
   topLeft: "┌",
   bottomLeft: "└",
@@ -70,7 +80,7 @@ const WHITE_BOX_BORDER = {
   rightT: "┤",
 }
 
-export function DialogLazyGit(props: { dialog: any; error?: string }) {
+export function DialogLazyGit(props: { dialog: DialogContext; error?: string }) {
   const { theme } = useForkTheme()
 
   onMount(() => {
@@ -121,7 +131,7 @@ export function DialogLazyGit(props: { dialog: any; error?: string }) {
   )
 }
 
-export function DialogBackupConfig(props: { dialog: any; directory: string }) {
+export function DialogBackupConfig(props: { dialog: DialogContext; directory: string }) {
   const { theme } = useForkTheme()
   const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 17)
   const defaultPath = `~/opencode-backup-${ts}.json`
@@ -268,7 +278,7 @@ export function DialogBackupConfig(props: { dialog: any; directory: string }) {
   )
 }
 
-export function DialogRestoreConfig(props: { dialog: any; directory: string }) {
+export function DialogRestoreConfig(props: { dialog: DialogContext; directory: string }) {
   const { theme } = useForkTheme()
   const [backupPath, setBackupPath] = createSignal("")
   const [status, setStatus] = createSignal<"input" | "success" | "error">("input")
@@ -419,7 +429,7 @@ function resolveDir(dir: string): string {
   return resolved
 }
 
-export function DialogTestAPI(props: { dialog: any }) {
+export function DialogTestAPI(props: { dialog: DialogContext }) {
   const { theme } = useForkTheme()
   const dimensions = useTerminalDimensions()
   const [results, setResults] = createSignal<ProviderTestResult[]>([])
@@ -869,7 +879,7 @@ function resolveSafeCwd(targetPath: string | undefined): string {
 }
 
 export function useVimSession(
-  scrollRef: Accessor<any>,
+  scrollRef: Accessor<ScrollBoxRenderable | undefined>,
   promptRef: Accessor<MinimalPromptRef | undefined>,
   copyMode: {
     enter: () => void
@@ -879,7 +889,7 @@ export function useVimSession(
     clamp: (delta: number) => void
     active: Accessor<boolean>
   },
-  dialog: any,
+  dialog: DialogContext,
   directory: Accessor<string>,
   menu: Accessor<LeaderGroup[]>,
 ) {
@@ -895,7 +905,7 @@ export function useVimSession(
   const selectableItems = createMemo(() => {
     const group = menu().find((item) => item.key === leaderGroup())
     const items = group ? group.items : menu()
-    return items.filter((item) => !isSeparator(item as any)) as (LeaderLeaf | LeaderGroup)[]
+    return items.filter((item) => !isSeparator(item))
   })
 
   const focusPrompt = (text?: string) => {
@@ -966,9 +976,9 @@ export function useVimSession(
       if (result.error) {
         throw result.error
       }
-    } catch (e: any) {
+    } catch (e) {
       dialog.replace(() => (
-        <DialogLazyGit dialog={dialog} error={e?.message || String(e)} />
+        <DialogLazyGit dialog={dialog} error={errorMessage(e)} />
       ))
     } finally {
       renderer.currentRenderBuffer.clear()
@@ -977,7 +987,7 @@ export function useVimSession(
     }
   }
 
-  const runLazyVim = (rendererInstance: any, cwd: string) => {
+  const runLazyVim = (rendererInstance: ReturnType<typeof useRenderer>, cwd: string) => {
     // Find available editor: nvim > vim > vi
     const editors = ["nvim", "vim", "vi"]
     let editor: string | null = null
@@ -1009,9 +1019,9 @@ export function useVimSession(
       if (result.error) {
         throw result.error
       }
-    } catch (e: any) {
+    } catch (e) {
       // Silently ignore errors (e.g., user quit editor)
-      console.error("LazyVim error:", e?.message || String(e))
+      console.error("LazyVim error:", errorMessage(e))
     } finally {
       rendererInstance.currentRenderBuffer.clear()
       rendererInstance.resume()
@@ -1031,9 +1041,9 @@ export function useVimSession(
       if (result.error) {
         throw result.error
       }
-    } catch (e: any) {
+    } catch (e) {
       dialog.replace(() => (
-        <DialogLazyGit dialog={dialog} error={`${cmd}: ${e?.message || String(e)}`} />
+        <DialogLazyGit dialog={dialog} error={`${cmd}: ${errorMessage(e)}`} />
       ))
     } finally {
       renderer.currentRenderBuffer.clear()
@@ -1107,7 +1117,7 @@ export function useVimSession(
             }
           }
           // Store filter for skill dialog
-          ;(globalThis as any).__SKILL_FILTER__ = entry.skill
+          globalThis.__SKILL_FILTER__ = entry.skill
           // Trigger the skill command
           keymap.dispatchCommand("prompt.skills")
         })
@@ -1131,11 +1141,8 @@ export function useVimSession(
         dialog.replace(() => <DialogQuickModel dialog={dialog} directory={directory()} />)
         return
       }
-      const cfg = loadQuickModelConfig()
+      const cfg = loadQuickModelConfig(directory())
       const model = getSlotModel(cfg, key)
-      // DEBUG: log to temp file to diagnose slot mapping
-      const debugMsg = `[quick-model] key=${key} slots=${JSON.stringify(cfg.slots)} model=${JSON.stringify(model)}\n`
-      try { require("node:fs").appendFileSync("/tmp/quick-model-debug.log", debugMsg) } catch {}
       if (!model) return
       if (isForcedFreeOnly() && !isModelFree(sync.data.provider, model)) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
@@ -1211,7 +1218,7 @@ export function useVimSession(
               setLeaderGroup(selected.key)
               setLeaderSelectedIndex(0)
             } else {
-              runLeaderLeaf(selected)
+              runLeaderLeaf(selected as LeaderLeaf)
             }
             return true
           },
@@ -1411,7 +1418,7 @@ export function useVimSession(
 
 export function useVimHome(
   promptRef: Accessor<MinimalPromptRef | undefined>,
-  dialog: any,
+  dialog: DialogContext,
   directory: Accessor<string>,
   menu: Accessor<LeaderGroup[]>,
 ) {
@@ -1425,7 +1432,7 @@ export function useVimHome(
   const selectableItems = createMemo(() => {
     const group = menu().find((item) => item.key === leaderGroup())
     const items = group ? group.items : menu()
-    return items.filter((item) => !isSeparator(item as any)) as (LeaderLeaf | LeaderGroup)[]
+    return items.filter((item) => !isSeparator(item))
   })
 
   const focusPrompt = (text?: string) => {
@@ -1472,9 +1479,9 @@ export function useVimHome(
       if (result.error) {
         throw result.error
       }
-    } catch (e: any) {
+    } catch (e) {
       dialog.replace(() => (
-        <DialogLazyGit dialog={dialog} error={e?.message || String(e)} />
+        <DialogLazyGit dialog={dialog} error={errorMessage(e)} />
       ))
     } finally {
       renderer.currentRenderBuffer.clear()
@@ -1483,7 +1490,7 @@ export function useVimHome(
     }
   }
 
-  const runLazyVim = (rendererInstance: any, cwd: string) => {
+  const runLazyVim = (rendererInstance: ReturnType<typeof useRenderer>, cwd: string) => {
     const editors = ["nvim", "vim", "vi"]
     let editor: string | null = null
 
@@ -1516,9 +1523,9 @@ export function useVimHome(
       if (result.error) {
         throw result.error
       }
-    } catch (e: any) {
+    } catch (e) {
       dialog.replace(() => (
-        <DialogLazyGit dialog={dialog} error={`LazyVim: ${e?.message || String(e)}`} />
+        <DialogLazyGit dialog={dialog} error={`LazyVim: ${errorMessage(e)}`} />
       ))
     } finally {
       rendererInstance.currentRenderBuffer.clear()
@@ -1539,9 +1546,9 @@ export function useVimHome(
       if (result.error) {
         throw result.error
       }
-    } catch (e: any) {
+    } catch (e) {
       dialog.replace(() => (
-        <DialogLazyGit dialog={dialog} error={`${cmd}: ${e?.message || String(e)}`} />
+        <DialogLazyGit dialog={dialog} error={`${cmd}: ${errorMessage(e)}`} />
       ))
     } finally {
       renderer.currentRenderBuffer.clear()
@@ -1604,11 +1611,8 @@ export function useVimHome(
         dialog.replace(() => <DialogQuickModel dialog={dialog} directory={directory()} />)
         return
       }
-      const cfg = loadQuickModelConfig()
+      const cfg = loadQuickModelConfig(directory())
       const model = getSlotModel(cfg, key)
-      // DEBUG: log to temp file to diagnose slot mapping
-      const debugMsg = `[quick-model-home] key=${key} slots=${JSON.stringify(cfg.slots)} model=${JSON.stringify(model)}\n`
-      try { require("node:fs").appendFileSync("/tmp/quick-model-debug.log", debugMsg) } catch {}
       if (!model) return
       if (isForcedFreeOnly() && !isModelFree(sync.data.provider, model)) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
@@ -1683,7 +1687,7 @@ export function useVimHome(
               setLeaderGroup(selected.key)
               setLeaderSelectedIndex(0)
             } else {
-              runLeaderLeaf(selected)
+              runLeaderLeaf(selected as LeaderLeaf)
             }
             return true
           },
