@@ -1262,7 +1262,7 @@ export function Prompt(props: PromptProps) {
     if (props.disabled) return false
     if (workspaceCreating()) return false
     if (auto()?.visible) return false
-    if (!store.prompt.input) {
+    if (store.prompt.input.trim() === "" && store.prompt.parts.length === 0) {
       if (props.onEnterEmpty) return !!props.onEnterEmpty()
       return false
     }
