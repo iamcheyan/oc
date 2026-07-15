@@ -1,19 +1,7 @@
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": [
-    [
-      "./plugins/tui-smoke.tsx",
-      {
-        "enabled": false,
-        "label": "workspace",
-        "keybinds": {
-          "smoke_modal": "ctrl+alt+m",
-          "smoke_screen": "ctrl+alt+o",
-          "smoke_screen_home": "escape,ctrl+shift+h",
-          "smoke_screen_modal": "ctrl+alt+m",
-          "smoke_dialog_close": "escape,q"
-        }
-      }
-    ]
-  ]
+  // The local smoke/vim TUI plugin is kept under .opencode/plugins/ for
+  // plugin-runtime testing, but it conflicts with the current opencode-vim
+  // mode. Do not declare it here unless testing plugins explicitly.
+  "plugin": []
 }
