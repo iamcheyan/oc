@@ -8,6 +8,13 @@ import path from "path"
 import fs from "fs/promises"
 import readline from "readline"
 
+type ConfigShape = {
+  model?: string
+  provider?: Record<string, { models?: Record<string, unknown> }>
+}
+
+type Keypress = { name?: string; ctrl?: boolean }
+
 export const ModelSelectCommand = cmd({
   command: "model-select",
   describe: "Interactively select a default model from config.json",
@@ -19,11 +26,11 @@ export const ModelSelectCommand = cmd({
       UI.println(UI.Style.TEXT_DANGER_BOLD + "config.json not found or empty" + UI.Style.TEXT_NORMAL)
       return
     }
-    const cfg = JSON.parse(text) as any
+    const cfg = JSON.parse(text) as ConfigShape
     const providers = cfg.provider ?? {}
     const options: { title: string; value: string }[] = []
     for (const [providerId, provider] of Object.entries(providers)) {
-      const models = (provider as any).models ?? {}
+      const models = provider.models ?? {}
       for (const modelId of Object.keys(models)) {
         options.push({ title: `${providerId}/${modelId}`, value: `${providerId}/${modelId}` })
       }
@@ -33,9 +40,14 @@ export const ModelSelectCommand = cmd({
       return
     }
 
+    if (!process.stdin.isTTY) {
+      UI.println(UI.Style.TEXT_DANGER_BOLD + "This command requires an interactive TTY" + UI.Style.TEXT_NORMAL)
+      return
+    }
+
     // Setup readline for raw keypress handling
     readline.emitKeypressEvents(process.stdin)
-    if (process.stdin.isTTY) process.stdin.setRawMode(true)
+    process.stdin.setRawMode(true)
 
     let index = 0
     const render = () => {
@@ -51,45 +63,32 @@ export const ModelSelectCommand = cmd({
 
     render()
 
-    let selectedModel: string | undefined = undefined
-
-    const cleanup = () => {
-      if (process.stdin.isTTY) process.stdin.setRawMode(false)
-      process.stdin.removeAllListeners("keypress")
-      process.stdout.write("\x1b[?25h") // show cursor
-    }
-
-    const finish = (selected?: string) => {
-      selectedModel = selected
-      cleanup()
-    }
-
-    const onKey = (str: string, key: any) => {
-      if (key.name === "up") {
-        index = (index - 1 + options.length) % options.length
-        render()
-      } else if (key.name === "down") {
-        index = (index + 1) % options.length
-        render()
-      } else if (key.name === "return") {
-        const selected = options[index].value
-        finish(selected)
-      } else if (key.name === "escape" || (key.ctrl && key.name === "c")) {
-        finish()
+    const selectedModel = await new Promise<string | undefined>((resolve) => {
+      const cleanup = () => {
+        process.stdin.setRawMode(false)
+        process.stdin.removeAllListeners("keypress")
+        process.stdout.write("\x1b[?25h") // show cursor
       }
-    }
 
-    process.stdin.on("keypress", onKey)
-    // Keep the command alive until a selection is made.
-    // The promise resolves when raw mode is turned off (i.e., after finish())
-    await new Promise<void>((resolve) => {
-      const interval = setInterval(() => {
-        if (!process.stdin.isRaw) {
-          clearInterval(interval)
-          resolve()
+      const onKey = (_str: string, key: Keypress) => {
+        if (key.name === "up") {
+          index = (index - 1 + options.length) % options.length
+          render()
+        } else if (key.name === "down") {
+          index = (index + 1) % options.length
+          render()
+        } else if (key.name === "return") {
+          cleanup()
+          resolve(options[index].value)
+        } else if (key.name === "escape" || (key.ctrl && key.name === "c")) {
+          cleanup()
+          resolve(undefined)
         }
-      }, 50)
+      }
+
+      process.stdin.on("keypress", onKey)
     })
+
     // After the user has selected (or cancelled), update the config if needed
     if (selectedModel) {
       cfg.model = selectedModel

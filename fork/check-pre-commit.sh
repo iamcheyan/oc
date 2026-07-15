@@ -8,8 +8,13 @@ RESET='\033[0m'
 
 blocked_paths=(
   ".oc/quick-model.jsonc"
+  ".oc/quick-model.json"
   ".oc/vim.jsonc"
+  ".oc/vim.json"
   ".oc/routing.jsonc"
+  ".oc/routing.json"
+  ".opencode/quick-model.jsonc"
+  ".opencode/quick-model.json"
   ".opencode/mina-routing.jsonc"
 )
 
@@ -24,6 +29,15 @@ is_blocked_path() {
   for blocked in "${blocked_paths[@]}"; do
     [ "$file" = "$blocked" ] && return 0
   done
+  return 1
+}
+
+is_model_slot_config_path() {
+  case "$1" in
+    .oc/quick-model.json|.oc/quick-model.jsonc|.opencode/quick-model.json|.opencode/quick-model.jsonc)
+      return 0
+      ;;
+  esac
   return 1
 }
 
@@ -45,7 +59,7 @@ scan_staged_file() {
     return
   fi
 
-  if printf '%s\n' "$content" | grep -Eq '"quick_model"[[:space:]]*:'; then
+  if is_model_slot_config_path "$file" && printf '%s\n' "$content" | grep -Eq '"quick_model"[[:space:]]*:'; then
     report "$file contains quick_model slots; store them in ~/.config/opencode/quick-model.jsonc"
   fi
 

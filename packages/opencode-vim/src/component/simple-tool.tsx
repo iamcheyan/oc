@@ -1,5 +1,5 @@
 import { TextAttributes } from "@opentui/core"
-import { Switch, Match, Show, createMemo, For } from "solid-js"
+import { Switch, Match, Show, createMemo, For, type JSX } from "solid-js"
 import { useForkTheme } from "@/util/theme"
 import { useSession } from "@/upstream/session"
 import { usePathFormatter } from "@tui/context/path-format"
@@ -85,7 +85,7 @@ function formatCount(count: unknown, singular: string, plural = `${singular}s`) 
   return `${count} ${count === 1 ? singular : plural}`
 }
 
-function ToolBlock(props: { children: any }) {
+function ToolBlock(props: { children: JSX.Element }) {
   return (
     <box flexDirection="column" width="100%" marginTop={1} marginBottom={1}>
       {props.children}
@@ -109,7 +109,7 @@ function ToolHeader(props: { icon: string; label: string; value?: string }) {
   )
 }
 
-function DetailLine(props: { children: any; tone?: "muted" | "primary" | "error" }) {
+function DetailLine(props: { children: JSX.Element; tone?: "muted" | "primary" | "error" }) {
   const { theme } = useForkTheme()
   const fg = () => {
     if (props.tone === "primary") return theme.primary
@@ -176,8 +176,10 @@ function ParsedReadOutput(props: { output: string; maxEntries?: number }) {
   )
 }
 
+type Diagnostic = { severity?: string; message?: string }
+
 // Diagnostics display for write/edit with errors
-function Diagnostics(props: { diagnostics: any[]; filePath: string }) {
+function Diagnostics(props: { diagnostics: Diagnostic[]; filePath: string }) {
   const { theme } = useForkTheme()
   return (
     <For each={props.diagnostics}>
@@ -330,7 +332,7 @@ export function SimpleTool(props: SimpleToolProps) {
               drawUnstyledText={false}
             />
           </box>
-          <Diagnostics diagnostics={metadata().diagnostics || []} filePath={input().filePath || ""} />
+          <Diagnostics diagnostics={(metadata().diagnostics as Diagnostic[]) || []} filePath={input().filePath || ""} />
         </ToolBlock>
       </Match>
 

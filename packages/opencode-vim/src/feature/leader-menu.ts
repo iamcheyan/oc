@@ -30,7 +30,9 @@ export type LeaderLeaf = {
 
 export type LeaderSeparator = { key: "—" | "---"; label: string; separator: true }
 
-export function isSeparator(item: LeaderLeaf | LeaderSeparator): item is LeaderSeparator {
+export type LeaderItem = LeaderLeaf | LeaderSeparator | LeaderGroup
+
+export function isSeparator(item: LeaderItem): item is LeaderSeparator {
   return "separator" in item && item.separator === true
 }
 
