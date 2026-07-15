@@ -2,6 +2,7 @@ import { MinimalHome } from "./routes/home"
 import { MinimalSession } from "./routes/session"
 import oceanblack from "./theme/oceanblack.json" with { type: "json" }
 import { addTheme } from "@tui/context/theme"
+import { installCjkSafeOverlayPatch } from "./sdk/install-cjk-safe-overlay"
 
 declare global {
   var OPENCODE_TUI_ROOT_COMPONENTS:
@@ -13,6 +14,7 @@ declare global {
 }
 
 export function installMinimalRootComponents(target: typeof globalThis = globalThis) {
+  installCjkSafeOverlayPatch()
   ;(target as any).OPENCODE_TUI_ROOT_COMPONENTS = {
     Home: MinimalHome,
     Session: MinimalSession,
