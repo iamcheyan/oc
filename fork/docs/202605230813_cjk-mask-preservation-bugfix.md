@@ -167,3 +167,94 @@
    在根目录下运行 `bun patch --commit @opentui/core` 来自动让 Bun 重新捕获这个依赖修改，更新 `package.json` 中的新版本号映射和对应的补丁文件内容。
 
 通过这一科学的维护模型，我们不仅成功抹平了底层渲染层面的 CJK 渲染缺陷，而且确保了未来的迭代与上游拉取（upstream merging）可以百分百从容应对！
+
+---
+
+## 5. 2026-07-16 更新：OpenTUI 0.4.3 后补丁丢失与当前修复
+
+### 5.1 实际观察
+
+2026-07-16 再次观察到同类问题：
+
+* 打开弹窗/选择框后，遮罩后的非 ASCII 文本会消失或变成黑色；
+* ASCII 英文和数字通常仍能显示；
+* 问题在 `Message Actions`、历史列表、git/status 文本等被半透明遮罩覆盖的区域可复现。
+
+检查当前仓库发现：
+
+* 当前 `@opentui/core` 已升级到 `0.4.3`；
+* 旧文档记录的 `patches/@opentui%2Fcore@0.2.15.patch` 已不存在；
+* 根 `package.json` 的 `patchedDependencies` 中也没有 `@opentui/core@0.4.3` 对应补丁；
+* `node_modules` 中当前 `OptimizedBuffer.fillRect()` 仍直接调用 native `bufferFillRect()`；
+* `OptimizedBuffer.drawBox()` 在 `shouldFill` 时仍直接调用 native `bufferDrawBox()`。
+
+结论：这不是新问题，而是旧的 CJK/非 ASCII 遮罩修复在 OpenTUI 升级过程中失效了。
+
+### 5.2 当前采用的修复方式
+
+这次没有重新修改上游 TUI 文件，也没有立刻恢复 Bun dependency patch。为了符合当前 fork 维护原则：
+
+> fork 行为尽量集中在 `packages/opencode-vim/**`，普通上游包不长期改动。
+
+当前修复改为在 `opencode-vim` 启动时安装 runtime patch：
+
+* 文件：`packages/opencode-vim/src/sdk/install-cjk-safe-overlay.ts`
+* 入口：`packages/opencode-vim/src/root-components.ts`
+
+`installMinimalRootComponents()` 会调用 `installCjkSafeOverlayPatch()`。该补丁只在 `opencode-vim` 模式内生效。
+
+### 5.3 当前补丁行为
+
+runtime patch 会修改 `@opentui/core` 导出的 `OptimizedBuffer.prototype`：
+
+1. `fillRect()`
+   * `alpha === 0`：直接跳过；
+   * `alpha === 255`：继续走 native `bufferFillRect()`；
+   * `0 < alpha < 255`：在 JS 层混合 `fg/bg`，保留 `buffers.char` 中已有字符 token。
+
+2. `drawBox()`
+   * 如果 `shouldFill` 且 `backgroundColor` 半透明：
+     * 先调用 CJK-safe `fillRect()` 进行背景混合；
+     * 再调用原始 `drawBox()`，但传入 `shouldFill: false`，只绘制边框和标题。
+   * 其他情况继续走原始 `drawBox()`。
+
+这样可以避免 native 半透明填充过程中把 CJK/非 ASCII 字符 token 当成无效字符清掉。
+
+### 5.4 为什么不直接改 `packages/tui`
+
+这次修复遵循当前维护边界：
+
+* 不修改 `packages/tui/src/**`；
+* 不新增普通上游 seam；
+* 不改 `@opentui/core` 源码；
+* 修复集中在 `packages/opencode-vim/**`。
+
+这让上游 rebase 时冲突面更小。后续如果上游 OpenTUI 修复了 native 层问题，可以直接移除 runtime patch。
+
+### 5.5 验证
+
+修复后已执行：
+
+```bash
+cd packages/opencode-vim
+bun typecheck
+bun test
+cd ../..
+bash fork/check-upstream-seams.sh
+```
+
+结果：
+
+* `bun typecheck` 通过；
+* `bun test` 通过，12 个测试全部通过；
+* `fork/check-upstream-seams.sh` 通过；
+* 修改范围仍在 fork-owned 路径内。
+
+### 5.6 后续维护提醒
+
+如果未来再次升级 `@opentui/core`：
+
+1. 检查 `OptimizedBuffer.fillRect()` 是否仍直接调用 native `bufferFillRect()`；
+2. 检查 `OptimizedBuffer.drawBox()` 是否仍在半透明 `shouldFill` 时直接调用 native `bufferDrawBox()`；
+3. 如果上游 native 层仍未修复，则保留或适配 `packages/opencode-vim/src/sdk/install-cjk-safe-overlay.ts`；
+4. 如果上游已经修复 CJK/非 ASCII 遮罩问题，则可以删除 runtime patch，并用真实 TUI 截图验证弹窗遮罩后的非 ASCII 文本。
