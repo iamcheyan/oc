@@ -2,7 +2,18 @@ import { readFileSync, existsSync } from "node:fs"
 import { execSync } from "node:child_process"
 import path from "node:path"
 
-export type LeaderAction = "tui" | "command" | "shell" | "quit" | "clear" | "backup" | "restore" | "api_test" | "lazygit" | "lazyvim" | "skill"
+export type LeaderAction =
+  | "tui"
+  | "command"
+  | "shell"
+  | "quit"
+  | "clear"
+  | "backup"
+  | "restore"
+  | "api_test"
+  | "lazygit"
+  | "lazyvim"
+  | "skill"
 
 export type LeaderItemConfig =
   | {
