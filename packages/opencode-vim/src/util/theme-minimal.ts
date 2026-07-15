@@ -12,12 +12,10 @@ export type MinimalThemeShape = {
 export function applyMinimalThemeOverrides<T extends MinimalThemeShape>(theme: T): T {
   if (!isMinimalTuiEnabled()) return theme
 
-  const selectedListItemText = theme._hasSelectedListItemText ? theme.selectedListItemText : theme.background
-
   return {
     ...theme,
     background: TRANSPARENT_BACKGROUND,
-    selectedListItemText,
-    _hasSelectedListItemText: true,
+    selectedListItemText: theme.selectedListItemText,
+    _hasSelectedListItemText: theme._hasSelectedListItemText,
   }
 }
