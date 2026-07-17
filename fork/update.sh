@@ -1,8 +1,29 @@
 #!/bin/bash
 set -euo pipefail
 
-OPENCODE="./fork/dist/opencode-linux-arm64/bin/opencode"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+detect_platform() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  case "$os" in
+    Linux) PLATFORM_OS="linux" ;;
+    Darwin) PLATFORM_OS="darwin" ;;
+    MINGW*|MSYS*|CYGWIN*) PLATFORM_OS="windows" ;;
+    *) PLATFORM_OS="linux" ;;
+  esac
+  case "$arch" in
+    x86_64|amd64) PLATFORM_ARCH="x64" ;;
+    aarch64|arm64) PLATFORM_ARCH="arm64" ;;
+    *) PLATFORM_ARCH="x64" ;;
+  esac
+}
+
+OPENCODE_BIN() {
+  detect_platform
+  echo "$ROOT_DIR/fork/dist/opencode-${PLATFORM_OS}-${PLATFORM_ARCH}/bin/opencode"
+}
 
 # 从 config.jsonc 中发现免费模型，随机选一个
 pick_free_model() {
@@ -96,7 +117,12 @@ fi
 MODEL=$(pick_free_model)
 echo "Using model: $MODEL"
 
-"$OPENCODE" run "
+OPENCODE_BIN_PATH="$(OPENCODE_BIN)"
+if [ ! -x "$OPENCODE_BIN_PATH" ]; then
+  echo "Warning: opencode binary not found at $OPENCODE_BIN_PATH; skipping auto-fix."
+  echo "Build it first with: bash fork/build.sh"
+else
+  "$OPENCODE_BIN_PATH" run "
 变基 upstream/dev 失败，有冲突需要解决。
 请执行以下步骤：
 1. 查看冲突文件：git status
@@ -105,6 +131,7 @@ echo "Using model: $MODEL"
 4. 执行 git rebase --continue
 5. 确认变基成功：git log --oneline -3
 " --model "$MODEL" --dir "$ROOT_DIR" --dangerously-skip-permissions --format json 2>/dev/null || true
+fi
 
 # 检查是否仍有冲突
 if git rebase --continue 2>&1; then
