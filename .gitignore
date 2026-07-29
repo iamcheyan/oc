@@ -39,7 +39,7 @@ tsconfig.tsbuildinfo
 
 # Fork local dev
 screen/
-test/
+/test/
 .oc/quick-model.jsonc
 .oc/vim.jsonc
 .oc/routing.jsonc
