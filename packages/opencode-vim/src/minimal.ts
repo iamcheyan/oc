@@ -1,8 +1,13 @@
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs"
+import { Effect } from "effect"
 import { TuiThreadCommand } from "@/upstream/thread"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { Global } from "@opencode-ai/core/global"
 import { applyMinimalModeDefaults } from "./runtime"
 import { installMinimalRootComponents } from "./root-components"
 import { MODEL_FREE_ONLY_ENV } from "./config/model-filter"
+import { createThreadTransport } from "./thread-transport"
+import { runVimTui } from "./run"
 
 type MinimalArgs = {
   free?: boolean
@@ -28,8 +33,24 @@ export const MinimalCommand: CommandModule<object, MinimalArgs> = {
     if (args.free) process.env[MODEL_FREE_ONLY_ENV] = "1"
     installMinimalRootComponents()
 
-    if (typeof TuiThreadCommand.handler === "function") {
-      await TuiThreadCommand.handler(args as never)
+    const transport = await createThreadTransport(args as never)
+    try {
+      await Effect.runPromise(
+        runVimTui({
+          url: transport.url,
+          args: transport.args,
+          config: transport.config,
+          onSnapshot: transport.onSnapshot,
+          directory: transport.directory,
+          fetch: transport.fetch,
+          headers: transport.headers,
+          events: transport.events,
+          pluginHost: transport.pluginHost,
+        }).pipe(Effect.provide(AppNodeBuilder.build(Global.node))),
+      )
+    } finally {
+      await transport.stop()
     }
+    process.exit(0)
   },
 }
