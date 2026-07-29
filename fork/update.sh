@@ -70,6 +70,30 @@ else:
   fi
 }
 
+finish_rebase() {
+  local backup_branch="$1"
+  echo ""
+  echo "=== Rebase complete ==="
+  echo "=== Regenerating bun.lock from resolved dependencies ==="
+  bun install
+  echo ""
+  echo "=== Validating fork ownership / seams ==="
+  bash "$ROOT_DIR/fork/check-upstream-seams.sh"
+  echo ""
+  echo "Fork patch queue: $(git rev-list --count upstream/dev..HEAD) commit(s) on top of upstream/dev"
+  git log --oneline upstream/dev..HEAD
+  echo ""
+  echo "If successful, push with: git push origin main --force-with-lease"
+  echo "To rollback: git checkout main && git reset --hard $backup_branch"
+}
+
+echo "=== Checking worktree ==="
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Error: worktree is not clean. Commit or stash changes before syncing."
+  git status --short
+  exit 1
+fi
+
 echo "=== Fetching upstream ==="
 git fetch upstream
 
@@ -78,6 +102,7 @@ echo "=== Current state ==="
 git log --oneline -3 origin/main 2>/dev/null || echo "(no origin/main)"
 echo "..."
 git log --oneline -3 HEAD
+echo "Fork commits on top of upstream/dev: $(git rev-list --count upstream/dev..HEAD 2>/dev/null || echo '?')"
 
 echo ""
 echo "=== Rebase on upstream/dev ==="
@@ -90,12 +115,7 @@ git config merge.ours.name "Keep upstream bun.lock during rebase" 2>/dev/null ||
 git config merge.ours.driver "cp '%B' '%A'" 2>/dev/null || true
 
 if git rebase upstream/dev; then
-  echo ""
-  echo "=== Rebase complete ==="
-  echo "=== Regenerating bun.lock from resolved dependencies ==="
-  bun install
-  echo "If successful, push with: git push origin main --force-with-lease"
-  echo "To rollback: git checkout main && git reset --hard $BACKUP_BRANCH"
+  finish_rebase "$BACKUP_BRANCH"
   exit 0
 fi
 
@@ -135,13 +155,15 @@ fi
 
 # 检查是否仍有冲突
 if git rebase --continue 2>&1; then
-  echo ""
-  echo "=== Auto-fix succeeded ==="
-  echo "Push with: git push origin main --force-with-lease"
-elif git status 2>&1 | grep -q "rebasing"; then
+  finish_rebase "$BACKUP_BRANCH"
+  exit 0
+fi
+
+if git status 2>&1 | grep -q "rebasing"; then
   echo ""
   echo "=== Auto-fix incomplete, manual resolution needed ==="
   echo "Continue with: git rebase --continue"
+  echo "Then run: bash fork/check-upstream-seams.sh && bun install"
   echo "Or abort with: git rebase --abort"
   exit 1
 fi
