@@ -7,6 +7,10 @@ node_modules
 .idea
 .vscode
 .codex
+.antigravitycli/
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
 *~
 playground
 tmp
@@ -32,3 +36,11 @@ UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+# Fork local dev
+screen/
+test/
+.oc/quick-model.jsonc
+.oc/vim.jsonc
+.oc/routing.jsonc
+.opencode/mina-routing.jsonc
