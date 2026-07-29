@@ -25,10 +25,6 @@ while IFS= read -r line || [ -n "$line" ]; do
     *) allowed+=("$line") ;;
   esac
 done < "$ALLOWLIST"
-[ "${#allowed[@]}" -gt 0 ] || {
-  echo -e "${RED}Empty seam allowlist: $ALLOWLIST${RESET}"
-  exit 1
-}
 
 is_seam() {
   local file="$1"
@@ -123,9 +119,9 @@ done
 
 # ─── Seam marker budget ─────────────────────────────────────────────────────
 # Fail if the total FORK-SEAM marker count grows beyond the frozen baseline.
-# Current baseline: processor.ts (1). When a seam is removed,
-# lower SEAM_BUDGET here in the same commit.
-SEAM_BUDGET=1
+# Current baseline: 0 (all seams eliminated). Any new FORK-SEAM marker
+# requires explicit approval and a raised budget with justification.
+SEAM_BUDGET=0
 seam_count=$(list_seam_marker_files | while IFS= read -r f; do
   if command -v rg >/dev/null 2>&1; then
     rg -c 'FORK-SEAM \(opencode-vim\)' "$f" 2>/dev/null || true
