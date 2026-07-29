@@ -123,9 +123,9 @@ done
 
 # ─── Seam marker budget ─────────────────────────────────────────────────────
 # Fail if the total FORK-SEAM marker count grows beyond the frozen baseline.
-# Current baseline: app.tsx (5) + processor.ts (1) = 6. When a seam is removed,
+# Current baseline: processor.ts (1). When a seam is removed,
 # lower SEAM_BUDGET here in the same commit.
-SEAM_BUDGET=6
+SEAM_BUDGET=1
 seam_count=$(list_seam_marker_files | while IFS= read -r f; do
   if command -v rg >/dev/null 2>&1; then
     rg -c 'FORK-SEAM \(opencode-vim\)' "$f" 2>/dev/null || true
