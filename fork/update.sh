@@ -80,6 +80,13 @@ finish_rebase() {
   echo "=== Validating fork ownership / seams ==="
   bash "$ROOT_DIR/fork/check-upstream-seams.sh"
   echo ""
+  echo "=== Typecheck (catches Provider API drift) ==="
+  (cd "$ROOT_DIR/packages/opencode-vim" && bun typecheck) || {
+    echo -e "\033[0;33mWarning: typecheck failed — upstream likely changed a Provider/context API.\033[0m"
+    echo -e "\033[0;33mFix the compile errors in packages/opencode-vim/src/run.tsx, then commit and push.\033[0m"
+    echo -e "\033[0;33mThis is expected occasionally — it replaces the old git text conflicts.\033[0m"
+    exit 1
+  }
   echo "Fork patch queue: $(git rev-list --count upstream/dev..HEAD) commit(s) on top of upstream/dev"
   git log --oneline upstream/dev..HEAD
   echo ""
