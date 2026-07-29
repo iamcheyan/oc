@@ -121,5 +121,23 @@ for file in "${allowed[@]}"; do
   fi
 done
 
+# ─── Seam marker budget ─────────────────────────────────────────────────────
+# Fail if the total FORK-SEAM marker count grows beyond the frozen baseline.
+# Current baseline: app.tsx (5) + processor.ts (1) = 6. When a seam is removed,
+# lower SEAM_BUDGET here in the same commit.
+SEAM_BUDGET=6
+seam_count=$(list_seam_marker_files | while IFS= read -r f; do
+  if command -v rg >/dev/null 2>&1; then
+    rg -c 'FORK-SEAM \(opencode-vim\)' "$f" 2>/dev/null || true
+  else
+    grep -c 'FORK-SEAM (opencode-vim)' "$f" 2>/dev/null || true
+  fi
+done | awk '{s+=$1} END{print s+0}')
+if [ "$seam_count" -gt "$SEAM_BUDGET" ]; then
+  echo -e "${RED}Seam marker budget exceeded: $seam_count > $SEAM_BUDGET (baseline).${RESET}"
+  echo -e "${RED}Do not add new FORK-SEAM markers. Remove the seam or raise the baseline with justification.${RESET}"
+  failed=1
+fi
+echo -e "${CYAN}Seam markers: $seam_count / $SEAM_BUDGET budget${RESET}"
 [ "$failed" -eq 0 ] || exit 1
 echo -e "${GREEN}Fork ownership check passed (${#allowed[@]} upstream seam files).${RESET}"
