@@ -152,7 +152,9 @@ build_entrypoint() {
     BUILD_ENTRYPOINT="$absolute_entrypoint" \
     BUILD_TSCONFIG="$tsconfig" \
     BUILD_EXTRA_ENTRYPOINTS="$extra_entrypoints" \
+    TS_WORKER_SOURCE="$parser_worker" \
     BUILD_TREE_SITTER_WORKER_PATH="$tree_sitter_worker_path" \
+    BUILD_TREE_SITTER_WORKER_FILE="opentui-tree-sitter-worker.js" \
     BUILD_OPENCODE_WORKER_PATH="$opencode_worker_path" \
     BUILD_MINIFY="$minify" \
     bun --eval '
@@ -162,9 +164,14 @@ const extraEntrypoints = (process.env.BUILD_EXTRA_ENTRYPOINTS || "")
   .split("\n")
   .map((item) => item.trim())
   .filter(Boolean)
+const tsWorkerName = process.env.BUILD_TREE_SITTER_WORKER_FILE || "opentui-tree-sitter-worker.js"
+const tsWorkerContent = await Bun.file(process.env.TS_WORKER_SOURCE).text()
 await Bun.build({
-  entrypoints: [process.env.BUILD_ENTRYPOINT, ...extraEntrypoints],
+  entrypoints: [process.env.BUILD_ENTRYPOINT, ...extraEntrypoints.filter((p) => !p.includes("parser.worker")), tsWorkerName],
   conditions: ["browser"],
+  files: {
+    [tsWorkerName]: tsWorkerContent,
+  },
   tsconfig: process.env.BUILD_TSCONFIG,
   plugins: [plugin],
   external: ["node-gyp"],
@@ -186,7 +193,7 @@ await Bun.build({
     OPENCODE_LIBC: JSON.stringify(process.env.BUILD_LIBC),
     OPENCODE_MIGRATIONS: process.env.BUILD_MIGRATIONS,
     ...(process.env.BUILD_TREE_SITTER_WORKER_PATH
-      ? { OTUI_TREE_SITTER_WORKER_PATH: JSON.stringify(process.env.BUILD_TREE_SITTER_WORKER_PATH) }
+      ? { OTUI_TREE_SITTER_WORKER_PATH: JSON.stringify("/$bunfs/root/" + tsWorkerName) }
       : {}),
     ...(process.env.BUILD_OPENCODE_WORKER_PATH
       ? { OPENCODE_WORKER_PATH: JSON.stringify(process.env.BUILD_OPENCODE_WORKER_PATH) }
