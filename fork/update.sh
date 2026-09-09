@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Rebase must never open an editor in scheduled or headless runs.
+export GIT_EDITOR="${GIT_EDITOR:-true}"
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 detect_platform() {
