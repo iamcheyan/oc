@@ -25,10 +25,12 @@ Fork-owned paths include:
 - `.opencode/**`
 - `README.md`
 - `.github/workflows/fork-build.yml`
+- `.github/workflows/close-issues.yml`
+- `.github/workflows/close-prs.yml`
 - the fork workspace entries in `package.json` and `bun.lock`
 
-Root `AGENTS.md`, upstream workflows, translated READMEs, and ordinary upstream
-packages remain upstream-owned.
+Root `AGENTS.md`, other upstream workflows, translated READMEs, and ordinary
+upstream packages remain upstream-owned.
 
 ## Upstream Seams
 
