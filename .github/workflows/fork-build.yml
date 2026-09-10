@@ -237,7 +237,11 @@ jobs:
           for dir in artifacts/opencode-vim-*; do
             name="$(basename "$dir")"
             bin_dir="$(find "$dir" -type d -name bin | head -1)"
+            bin="$bin_dir/opencode-vim"
+            test -f "$bin"
+            chmod 755 "$bin"
             tar -czf "${name}.tar.gz" -C "$bin_dir" .
+            tar -tzvf "${name}.tar.gz" | grep -q '^-rwxr-xr-x .*opencode-vim$'
           done
 
       - name: Create release
