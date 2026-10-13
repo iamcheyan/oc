@@ -45,5 +45,3 @@ export function useSession() {
 
 export { DialogMessage } from "@tui/routes/session/dialog-message"
 export { PermissionPrompt } from "@tui/routes/session/permission"
-export { QuestionPrompt } from "@tui/routes/session/question"
-export { SubagentFooter } from "@tui/routes/session/subagent-footer"

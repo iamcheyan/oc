@@ -1,7 +1,8 @@
 import { createSignal, createMemo, Show, For, onMount } from "solid-js"
-import { useBindings } from "@tui/keymap"
+import { useBindings } from "@opentui/keymap/solid"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
-import { useSync } from "@tui/context/sync"
+import { useData } from "@tui/context/data"
+import { useLocation } from "@tui/context/location"
 import { useForkTheme } from "@/util/theme"
 import { RGBA, TextAttributes, type TextareaRenderable } from "@opentui/core"
 import type { DialogContext } from "@tui/ui/dialog"
@@ -18,7 +19,8 @@ const SLOTS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 export function DialogQuickModel(props: { dialog: DialogContext; directory: string }) {
   const { theme } = useForkTheme()
-  const sync = useSync()
+  const data = useData()
+  const location = useLocation()
 
   const [config, setConfig] = createSignal<QuickModelConfig>(loadQuickModelConfig(props.directory))
   const [selectedSlot, setSelectedSlot] = createSignal(0)
@@ -29,30 +31,30 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
   const [status, setStatus] = createSignal<"idle" | "saved">("idle")
   let searchInput: TextareaRenderable | undefined
 
+  const providers = () => data.location.provider.list(location.ref) ?? []
+  const models = () => data.location.model.list(location.ref) ?? []
+
   const freeOnly = createMemo(() => isForcedFreeOnly())
   const visibleSlotModel = (model: string) => {
     if (!model) return ""
     const idx = model.indexOf("/")
     if (idx === -1) return ""
-    if (freeOnly() && !isModelFree(sync.data.provider, { providerID: model.slice(0, idx), modelID: model.slice(idx + 1) })) return ""
+    const providerID = model.slice(0, idx)
+    const modelID = model.slice(idx + 1)
+    if (freeOnly() && !isModelFree(models(), { providerID, modelID })) return ""
     return model
   }
   const allModels = createMemo(() => {
-    const providers = sync.data.provider
-    const result: { key: string; label: string; provider: string; name: string }[] = []
-    for (const provider of providers) {
-      for (const modelID of Object.keys(provider.models)) {
-        const info = provider.models[modelID]
-        if (freeOnly() && !isFreeOpenCodeModel(provider, info)) continue
-        result.push({
-          key: `${provider.id}/${modelID}`,
-          label: `${provider.id}/${modelID}`,
-          provider: provider.name ?? provider.id,
-          name: info?.name ?? modelID,
-        })
-      }
-    }
-    return result
+    const providerByID = new Map(providers().map((provider) => [provider.id, provider]))
+    return models()
+      .filter((model) => model.status !== "deprecated")
+      .filter((model) => !freeOnly() || isFreeOpenCodeModel({ id: model.providerID }, model))
+      .map((model) => ({
+        key: `${model.providerID}/${model.id}`,
+        label: `${model.providerID}/${model.id}`,
+        provider: providerByID.get(model.providerID)?.name ?? model.providerID,
+        name: model.name,
+      }))
   })
 
   // Filter models by search query across label, provider name, and model name
@@ -161,18 +163,18 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
       borderColor={borderColor()}
       height={browse() ? 20 : 20}
       alignItems="flex-start"
-      backgroundColor={theme.backgroundPanel}
+      backgroundColor={theme.background.raised.base}
       padding={1}
     >
       <box width="100%" alignItems="center" justifyContent="center" marginBottom={1}>
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>
+        <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
           Quick Model Slots
         </text>
       </box>
 
       <Show when={!browse()}>
         <box width="100%" marginBottom={1}>
-          <text fg={theme.textMuted} attributes={TextAttributes.UNDERLINE}>
+          <text fg={theme.text.muted} attributes={TextAttributes.UNDERLINE}>
             {"Key  Model"}
           </text>
         </box>
@@ -189,13 +191,13 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
                 >
                   <text
                     width={4}
-                    fg={isSelected() ? RGBA.fromInts(255, 200, 0, 255) : theme.warning}
+                    fg={isSelected() ? RGBA.fromInts(255, 200, 0, 255) : theme.text.feedback.warning.base}
                     attributes={isSelected() ? TextAttributes.BOLD : undefined}
                   >
                     {slot}
                   </text>
                   <text
-                    fg={modelStr ? theme.text : theme.textMuted}
+                    fg={modelStr ? theme.text.base : theme.text.muted}
                     wrapMode="none"
                   >
                     {display}
@@ -206,7 +208,7 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
           </For>
         </box>
         <box width="100%" flexDirection="row" marginTop={1}>
-          <text fg={theme.textMuted}>
+          <text fg={theme.text.muted}>
             [↑↓] select  [Enter] browse  [d] clear  [s] save  [Esc] close
           </text>
         </box>
@@ -214,11 +216,11 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
 
       <Show when={browse()}>
         <box width="100%" marginBottom={1}>
-          <text fg={theme.textMuted}>Slot </text>
-          <text fg={theme.warning} attributes={TextAttributes.BOLD}>
+          <text fg={theme.text.muted}>Slot </text>
+          <text fg={theme.text.feedback.warning.base} attributes={TextAttributes.BOLD}>
             {SLOTS[selectedSlot()]}
           </text>
-          <text fg={theme.textMuted}> — Search: </text>
+          <text fg={theme.text.muted}> — Search: </text>
           <input
             ref={(r: TextareaRenderable) => { searchInput = r }}
             value={search()}
@@ -237,12 +239,12 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
             focusedTextColor={RGBA.fromInts(255, 255, 255, 255)}
             cursorColor={RGBA.fromInts(255, 200, 0, 255)}
             placeholder="type to filter models..."
-            placeholderColor={theme.textMuted}
+            placeholderColor={theme.text.muted}
           />
         </box>
         <box width="100%" flexDirection="column" height={MAX_VISIBLE + 1}>
           <Show when={visibleModels().length === 0}>
-            <text fg={theme.textMuted}>
+            <text fg={theme.text.muted}>
               No models match "{search()}"
             </text>
           </Show>
@@ -253,7 +255,7 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
                 backgroundColor={modelIndex() === i() ? RGBA.fromInts(40, 40, 60, 255) : undefined}
               >
                 <text
-                  fg={modelIndex() === i() ? RGBA.fromInts(255, 200, 0, 255) : theme.text}
+                  fg={modelIndex() === i() ? RGBA.fromInts(255, 200, 0, 255) : theme.text.base}
                   attributes={modelIndex() === i() ? TextAttributes.BOLD : undefined}
                 >
                   {modelIndex() === i() ? "❯ " : "  "}
@@ -264,7 +266,7 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
           </For>
         </box>
         <box width="100%" marginTop={1}>
-          <text fg={theme.textMuted}>
+          <text fg={theme.text.muted}>
             [type] filter  [↑↓] select  [Enter] assign+next  [Tab] clear  [Esc] back
           </text>
         </box>
@@ -272,7 +274,7 @@ export function DialogQuickModel(props: { dialog: DialogContext; directory: stri
 
       <Show when={status() === "saved"}>
         <box width="100%" alignItems="center" marginTop={1}>
-          <text fg={RGBA.fromInts(0, 200, 100, 255)} attributes={TextAttributes.BOLD}>
+          <text fg={theme.text.feedback.success.base} attributes={TextAttributes.BOLD}>
             Saved!
           </text>
         </box>

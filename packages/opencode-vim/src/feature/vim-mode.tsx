@@ -1,12 +1,12 @@
 import { createSignal, createEffect, createMemo, type Accessor, Show, onMount, onCleanup, For } from "solid-js"
-import { useBindings, useOpencodeKeymap } from "@tui/keymap"
+import { useBindings } from "@opentui/keymap/solid"
+import { Keymap } from "@tui/context/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
-import { useKV } from "@tui/context/kv"
+import { loadVimConfig } from "@/config/vim"
 import { useForkTheme } from "@/util/theme"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { TextAttributes, RGBA, type ScrollBoxRenderable } from "@opentui/core"
 import type { MinimalPromptRef } from "@/component/prompt"
-import { useDirectory } from "@tui/context/directory"
 import { existsSync, statSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 import os from "node:os"
@@ -26,7 +26,8 @@ import { DialogQuickModel } from "@/component/dialog-quick-model"
 import { DialogForkModel } from "@/component/dialog-model"
 import { useLocal } from "@tui/context/local"
 import { isForcedFreeOnly, isModelFree } from "@/config/model-filter"
-import { useSync } from "@tui/context/sync"
+import { useData } from "@tui/context/data"
+import { useLocation } from "@tui/context/location"
 import type { DialogContext } from "@tui/ui/dialog"
 
 
@@ -116,14 +117,14 @@ export function DialogLazyGit(props: { dialog: DialogContext; error?: string }) 
       height={props.error ? 7 : 5}
       alignItems="center"
       justifyContent="center"
-      backgroundColor={theme.backgroundPanel}
+      backgroundColor={theme.background.raised.base}
       padding={1}
     >
       <text fg={RGBA.fromInts(255, 255, 255, 255)} attributes={TextAttributes.BOLD} marginBottom={props.error ? 1 : 0}>
         lazygit
       </text>
       <Show when={props.error}>
-        <text fg={theme.textMuted} wrapMode="word" width="100%">
+        <text fg={theme.text.muted} wrapMode="word" width="100%">
           Error: {props.error}
         </text>
       </Show>
@@ -189,7 +190,7 @@ export function DialogBackupConfig(props: { dialog: DialogContext; directory: st
       height={containerHeight()}
       alignItems="flex-start"
       justifyContent="center"
-      backgroundColor={theme.backgroundPanel}
+      backgroundColor={theme.background.raised.base}
       padding={1}
     >
       <box width="100%" alignItems="center" justifyContent="center" marginBottom={1}>
@@ -203,7 +204,7 @@ export function DialogBackupConfig(props: { dialog: DialogContext; directory: st
 
       <Show when={status() === "input"}>
       <box width="100%" marginBottom={1}>
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>Backup destination path:</text>
+        <text fg={theme.text.base} attributes={TextAttributes.BOLD}>Backup destination path:</text>
       </box>
       
       <box width="100%" flexDirection="row" alignItems="center" marginBottom={1}>
@@ -228,7 +229,7 @@ export function DialogBackupConfig(props: { dialog: DialogContext; directory: st
           focusedTextColor={RGBA.fromInts(255, 255, 255, 255)}
           cursorColor={RGBA.fromInts(255, 200, 0, 255)}
           placeholder={defaultPath}
-          placeholderColor={theme.textMuted}
+          placeholderColor={theme.text.muted}
           ref={(r) => {
             if (r) {
               setTimeout(() => {
@@ -239,10 +240,10 @@ export function DialogBackupConfig(props: { dialog: DialogContext; directory: st
         />
       </box>
 
-        <text fg={theme.textMuted} wrapMode="word" width="100%" marginBottom={1}>
+        <text fg={theme.text.muted} wrapMode="word" width="100%" marginBottom={1}>
           • [Type/Paste path directly] and press Enter to save
         </text>
-        <text fg={theme.textMuted} wrapMode="word" width="100%">
+        <text fg={theme.text.muted} wrapMode="word" width="100%">
           • Press [ Enter ] to backup config now
         </text>
       </Show>
@@ -257,12 +258,12 @@ export function DialogBackupConfig(props: { dialog: DialogContext; directory: st
         <text fg={RGBA.fromInts(255, 255, 255, 255)} marginBottom={1} wrapMode="word" width="100%">
           Saved to: {savedFile().replace(os.homedir(), "~")}
         </text>
-        <text fg={theme.textMuted} attributes={TextAttributes.UNDERLINE} marginBottom={1}>
+        <text fg={theme.text.muted} attributes={TextAttributes.UNDERLINE} marginBottom={1}>
           Backed up {backedFiles().length} files:
         </text>
         <box flexDirection="column" alignItems="flex-start" width="100%">
           {backedFiles().map(f => (
-            <text fg={theme.textMuted} wrapMode="word" width="100%">
+            <text fg={theme.text.muted} wrapMode="word" width="100%">
               • {f.replace(os.homedir(), "~")}
             </text>
           ))}
@@ -270,7 +271,7 @@ export function DialogBackupConfig(props: { dialog: DialogContext; directory: st
       </Show>
 
       <box width="100%" alignItems="center" justifyContent="center" marginTop={1}>
-        <text fg={theme.textMuted} attributes={TextAttributes.ITALIC}>
+        <text fg={theme.text.muted} attributes={TextAttributes.ITALIC}>
           {status() === "input" ? "Press ESC to cancel" : "Press ESC or q to close"}
         </text>
       </box>
@@ -333,7 +334,7 @@ export function DialogRestoreConfig(props: { dialog: DialogContext; directory: s
       height={containerHeight()}
       alignItems="flex-start"
       justifyContent="center"
-      backgroundColor={theme.backgroundPanel}
+      backgroundColor={theme.background.raised.base}
       padding={1}
     >
       <box width="100%" alignItems="center" justifyContent="center" marginBottom={1}>
@@ -347,7 +348,7 @@ export function DialogRestoreConfig(props: { dialog: DialogContext; directory: s
 
       <Show when={status() === "input"}>
       <box width="100%" marginBottom={1}>
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>Backup file path to restore:</text>
+        <text fg={theme.text.base} attributes={TextAttributes.BOLD}>Backup file path to restore:</text>
       </box>
       
       <box width="100%" flexDirection="row" alignItems="center" marginBottom={1}>
@@ -375,7 +376,7 @@ export function DialogRestoreConfig(props: { dialog: DialogContext; directory: s
           focusedTextColor={RGBA.fromInts(255, 255, 255, 255)}
           cursorColor={RGBA.fromInts(255, 200, 0, 255)}
           placeholder="~/path/to/backup.json"
-          placeholderColor={theme.textMuted}
+          placeholderColor={theme.text.muted}
           ref={(r) => {
             if (r) {
               setTimeout(() => {
@@ -386,10 +387,10 @@ export function DialogRestoreConfig(props: { dialog: DialogContext; directory: s
         />
       </box>
 
-        <text fg={theme.textMuted} wrapMode="word" width="100%" marginBottom={1}>
+        <text fg={theme.text.muted} wrapMode="word" width="100%" marginBottom={1}>
           • [Type/Paste path directly] and press Enter to restore
         </text>
-        <text fg={theme.textMuted} wrapMode="word" width="100%">
+        <text fg={theme.text.muted} wrapMode="word" width="100%">
           • Safety backup of existing config will be created automatically
         </text>
       </Show>
@@ -405,14 +406,14 @@ export function DialogRestoreConfig(props: { dialog: DialogContext; directory: s
           Restore completed successfully!
         </text>
         <Show when={safetyFile()}>
-          <text fg={theme.textMuted} wrapMode="word" width="100%">
+          <text fg={theme.text.muted} wrapMode="word" width="100%">
             Safety backup of previous config saved to: {safetyFile().replace(os.homedir(), "~")}
           </text>
         </Show>
       </Show>
 
       <box width="100%" alignItems="center" justifyContent="center" marginTop={1}>
-        <text fg={theme.textMuted} attributes={TextAttributes.ITALIC}>
+        <text fg={theme.text.muted} attributes={TextAttributes.ITALIC}>
           {status() === "input" ? "Press ESC to cancel" : "Press ESC or q to close"}
         </text>
       </box>
@@ -656,7 +657,7 @@ export function DialogTestAPI(props: { dialog: DialogContext }) {
     <box
       height={containerHeight()}
       flexDirection="column"
-      backgroundColor={theme.backgroundPanel}
+      backgroundColor={theme.background.raised.base}
       padding={1}
       paddingLeft={2}
       paddingRight={2}
@@ -894,11 +895,12 @@ export function useVimSession(
   menu: Accessor<LeaderGroup[]>,
 ) {
   const { isNormal, enterInsert, isLeaderActive, setLeaderActive, leaderGroup, setLeaderGroup, leaderSelectedIndex, setLeaderSelectedIndex } = useVimMode()
-  const kv = useKV()
   const renderer = useRenderer()
-  const keymap = useOpencodeKeymap()
+  const keymap = Keymap.use()
   const local = useLocal()
-  const sync = useSync()
+  const sync = useData()
+  const location = useLocation()
+  const enterFocusPrompt = () => loadVimConfig(directory()).enterFocusPrompt ?? true
   let wasNormal: boolean | undefined = undefined
   let spaceActive = false
 
@@ -1119,17 +1121,17 @@ export function useVimSession(
           // Store filter for skill dialog
           globalThis.__SKILL_FILTER__ = entry.skill
           // Trigger the skill command
-          keymap.dispatchCommand("prompt.skills")
+          keymap.dispatch("prompt.skills")
         })
         return
       }
       if (entry.action === "command" && entry.command) {
-        keymap.dispatchCommand(entry.command)
+        keymap.dispatch(entry.command)
         return
       }
       // Legacy: no action specified, treat as command
       if (!entry.action && entry.command) {
-        keymap.dispatchCommand(entry.command)
+        keymap.dispatch(entry.command)
       }
     })
   }
@@ -1144,7 +1146,7 @@ export function useVimSession(
       const cfg = loadQuickModelConfig(directory())
       const model = getSlotModel(cfg, key)
       if (!model) return
-      if (isForcedFreeOnly() && !isModelFree(sync.data.provider, model)) return
+      if (isForcedFreeOnly() && !isModelFree(sync.location.model.list(location.ref), model)) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
     })
     return true
@@ -1362,12 +1364,12 @@ export function useVimSession(
       },
       {
         key: "return",
-        when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
+        when: () => isVimNormalActive() && enterFocusPrompt() && !isLeaderActive(),
         cmd: () => focusPromptFromNormal(),
       },
       {
         key: "enter",
-        when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
+        when: () => isVimNormalActive() && enterFocusPrompt() && !isLeaderActive(),
         cmd: () => focusPromptFromNormal(),
       },
       {
@@ -1423,11 +1425,12 @@ export function useVimHome(
   menu: Accessor<LeaderGroup[]>,
 ) {
   const { isNormal, enterInsert, isLeaderActive, setLeaderActive, leaderGroup, setLeaderGroup, leaderSelectedIndex, setLeaderSelectedIndex } = useVimMode()
-  const kv = useKV()
   const renderer = useRenderer()
-  const keymap = useOpencodeKeymap()
+  const keymap = Keymap.use()
   const local = useLocal()
-  const sync = useSync()
+  const sync = useData()
+  const location = useLocation()
+  const enterFocusPrompt = () => loadVimConfig(directory()).enterFocusPrompt ?? true
 
   const selectableItems = createMemo(() => {
     const group = menu().find((item) => item.key === leaderGroup())
@@ -1599,7 +1602,7 @@ export function useVimHome(
         return
       }
       if ((entry.action === "command" || !entry.action) && entry.command) {
-        keymap.dispatchCommand(entry.command)
+        keymap.dispatch(entry.command)
       }
     })
   }
@@ -1614,7 +1617,7 @@ export function useVimHome(
       const cfg = loadQuickModelConfig(directory())
       const model = getSlotModel(cfg, key)
       if (!model) return
-      if (isForcedFreeOnly() && !isModelFree(sync.data.provider, model)) return
+      if (isForcedFreeOnly() && !isModelFree(sync.location.model.list(location.ref), model)) return
       local.model.set({ providerID: model.providerID, modelID: model.modelID }, { recent: true })
     })
     return true
@@ -1744,12 +1747,12 @@ export function useVimHome(
       },
       {
         key: "return",
-        when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
+        when: () => isVimNormalActive() && enterFocusPrompt() && !isLeaderActive(),
         cmd: () => focusPromptFromNormal(),
       },
       {
         key: "enter",
-        when: () => isVimNormalActive() && kv.get("minimal_vim_enter_focus_prompt", true) && !isLeaderActive(),
+        when: () => isVimNormalActive() && enterFocusPrompt() && !isLeaderActive(),
         cmd: () => focusPromptFromNormal(),
       },
       {

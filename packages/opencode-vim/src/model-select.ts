@@ -1,101 +1,51 @@
-// Command: interactive model selector for CLI
-// Allows user to pick a default model from the config.json using arrow keys.
+import { OpenCode } from "@opencode/client/promise"
+import { readFile, writeFile } from "node:fs/promises"
+import path from "node:path"
+import os from "node:os"
 
-import { cmd } from "@opencode/cli/cmd/cmd"
-import { UI } from "@opencode/cli/ui"
-import { Global } from "@opencode-ai/core/global"
-import path from "path"
-import fs from "fs/promises"
-import readline from "readline"
-
-type ConfigShape = {
-  model?: string
-  provider?: Record<string, { models?: Record<string, unknown> }>
+export async function selectModel() {
+  const api = OpenCode.make({ baseUrl: process.env.OPENCODE_SERVER ?? "http://127.0.0.1:4096" })
+  const location = { directory: process.cwd() }
+  const [providers, models, documents] = await Promise.all([
+    api.provider.list({ location }), api.model.list({ location }), api.config.get({ location }),
+  ])
+  const options = models.data.flatMap((model) => {
+    const provider = providers.data.find((item) => item.id === model.providerID)
+    return provider ? [{ providerID: model.providerID, modelID: model.id, label: `${provider.name}/${model.name}` }] : []
+  })
+  if (!options.length) throw new Error("No models are available for this location")
+  let index = 0
+  const config = documents.findLast((item) => item.type === "document")
+  const configPath = config?.type === "document" ? config.path : path.join(os.homedir(), ".config/opencode/opencode.json")
+  if (!configPath) throw new Error("No writable OpenCode configuration document was found")
+  const current = config?.type === "document" ? config.info.model : undefined
+  const selected = typeof current === "string" ? options.findIndex((item) => item.label === current) : -1
+  if (selected >= 0) index = selected
+  process.stdin.setRawMode?.(true)
+  process.stdin.resume()
+  const render = () => {
+    process.stdout.write("\x1b[2J\x1b[HSelect model: ↑/↓, Enter, Esc\n")
+    options.forEach((item, i) => process.stdout.write(`${i === index ? ">" : " "} ${item.label}\n`))
+  }
+  render()
+  await new Promise<void>((resolve) => {
+    const onKey = (_: string, key: { name?: string; ctrl?: boolean }) => {
+      if (key.name === "up") index = (index + options.length - 1) % options.length
+      else if (key.name === "down") index = (index + 1) % options.length
+      else if (key.name === "return") {
+        cleanup()
+        void (async () => {
+          const contents = await readFile(configPath, "utf8").catch(() => "{}")
+          const value: unknown = JSON.parse(contents)
+          if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("OpenCode config must contain a JSON object")
+          await writeFile(configPath, JSON.stringify({ ...value, model: `${options[index].providerID}/${options[index].modelID}` }, null, 2) + "\n")
+          resolve()
+        })()
+        return
+      } else if (key.name === "escape" || (key.ctrl && key.name === "c")) { cleanup(); resolve(); return }
+      render()
+    }
+    const cleanup = () => { process.stdin.off("keypress", onKey); process.stdin.setRawMode?.(false) }
+    process.stdin.on("keypress", onKey)
+  })
 }
-
-type Keypress = { name?: string; ctrl?: boolean }
-
-export const ModelSelectCommand = cmd({
-  command: "model-select",
-  describe: "Interactively select a default model from config.json",
-  builder: (yargs) => yargs,
-  handler: async () => {
-    const configPath = path.join(Global.Path.config, "config.json")
-    const text = await fs.readFile(configPath, "utf-8").catch(() => "")
-    if (!text) {
-      UI.println(UI.Style.TEXT_DANGER_BOLD + "config.json not found or empty" + UI.Style.TEXT_NORMAL)
-      return
-    }
-    const cfg = JSON.parse(text) as ConfigShape
-    const providers = cfg.provider ?? {}
-    const options: { title: string; value: string }[] = []
-    for (const [providerId, provider] of Object.entries(providers)) {
-      const models = provider.models ?? {}
-      for (const modelId of Object.keys(models)) {
-        options.push({ title: `${providerId}/${modelId}`, value: `${providerId}/${modelId}` })
-      }
-    }
-    if (options.length === 0) {
-      UI.println(UI.Style.TEXT_WARNING_BOLD + "No models defined in config" + UI.Style.TEXT_NORMAL)
-      return
-    }
-
-    if (!process.stdin.isTTY) {
-      UI.println(UI.Style.TEXT_DANGER_BOLD + "This command requires an interactive TTY" + UI.Style.TEXT_NORMAL)
-      return
-    }
-
-    // Setup readline for raw keypress handling
-    readline.emitKeypressEvents(process.stdin)
-    process.stdin.setRawMode(true)
-
-    let index = 0
-    const render = () => {
-      // clear screen
-      process.stdout.write("\x1b[2J\x1b[0;0H")
-      console.log("Use ↑/↓ arrows to move, Enter to select, Esc/Ctrl+C to cancel")
-      options.forEach((opt, i) => {
-        const prefix = i === index ? "> " : "  "
-        const line = i === index ? `\x1b[7m${opt.title}\x1b[0m` : opt.title
-        console.log(prefix + line)
-      })
-    }
-
-    render()
-
-    const selectedModel = await new Promise<string | undefined>((resolve) => {
-      const cleanup = () => {
-        process.stdin.setRawMode(false)
-        process.stdin.removeAllListeners("keypress")
-        process.stdout.write("\x1b[?25h") // show cursor
-      }
-
-      const onKey = (_str: string, key: Keypress) => {
-        if (key.name === "up") {
-          index = (index - 1 + options.length) % options.length
-          render()
-        } else if (key.name === "down") {
-          index = (index + 1) % options.length
-          render()
-        } else if (key.name === "return") {
-          cleanup()
-          resolve(options[index].value)
-        } else if (key.name === "escape" || (key.ctrl && key.name === "c")) {
-          cleanup()
-          resolve(undefined)
-        }
-      }
-
-      process.stdin.on("keypress", onKey)
-    })
-
-    // After the user has selected (or cancelled), update the config if needed
-    if (selectedModel) {
-      cfg.model = selectedModel
-      await fs.writeFile(configPath, `${JSON.stringify(cfg, null, 2)}\n`)
-      UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Default model set to ${selectedModel}` + UI.Style.TEXT_NORMAL)
-    } else {
-      UI.println("Selection cancelled")
-    }
-  },
-})

@@ -1,18 +1,19 @@
-import type { MinimalPromptRef, PromptRef } from "@/component/prompt"
-import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
-import { useSync } from "@tui/context/sync"
+import type { PromptRef } from "@/component/prompt"
+import { createEffect, createMemo, createSignal, onMount, Show, untrack } from "solid-js"
+import { useData } from "@tui/context/data"
+import { useLocation } from "@tui/context/location"
+import { useClient } from "@tui/context/client"
+import { useRoute } from "@tui/context/route"
 import { Toast, useToast } from "@tui/ui/toast"
 import { useArgs } from "@tui/context/args"
-import { useRoute, useRouteData } from "@tui/context/route"
 import { usePromptRef } from "@tui/context/prompt"
 import { useLocal } from "@tui/context/local"
-import { useDirectory } from "@tui/context/directory"
 import { useEditorContext } from "@tui/context/editor"
 import { useDialog } from "@tui/ui/dialog"
-import { useBindings } from "@tui/keymap"
-import { useThinkingMode, nextThinkingMode } from "@tui/context/thinking"
+import { Keymap } from "@tui/context/keymap"
+import { nextThinkingMode } from "@tui/context/thinking"
 import { MinimalRendererBackground, useForkTheme } from "@/util/theme"
-import { useKV } from "@tui/context/kv"
+
 import { AutocompleteHostProvider } from "@/context/autocomplete-host"
 import { MinimalHomePromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
 import { getLeaderMenu, useVimHome, useVimMode } from "@/feature/vim-mode"
@@ -28,28 +29,36 @@ const placeholder = {
 }
 
 export function MinimalHome() {
-  const sync = useSync()
-  const routeData = useRouteData("home")
+  const data = useData()
+  const client = useClient()
+  const location = useLocation()
   const promptRef = usePromptRef()
-  const [ref, setRef] = createSignal<MinimalPromptRef | undefined>()
+  const [ref, setRef] = createSignal<PromptRef | undefined>()
   const args = useArgs()
   const local = useLocal()
   const editor = useEditorContext()
-  const directory = useDirectory()
   const dialog = useDialog()
   const toast = useToast()
-  const thinking = useThinkingMode()
-  const vimMode = useVimMode()
-  const { navigate } = useRoute()
-  const kv = useKV()
+  const [thinkingMode, setThinkingMode] = createSignal<"show" | "hide">("show")
   const { theme } = useForkTheme()
+  const vimMode = useVimMode()
+  const route = useRoute()
+  const directory = () => location.ref?.directory ?? data.location.default().directory
   const leaderMenu = createMemo(() => getLeaderMenu(directory()))
   const vimConfig = createMemo(() => loadVimConfig(directory()))
-  const vimHidePrompt = createMemo(() => kv.get("minimal_vim_hide_prompt") ?? vimConfig().hidePrompt ?? false)
-  const vimAutoResume = createMemo(() => kv.get("minimal_vim_auto_resume") ?? vimConfig().autoResume ?? false)
-  const pureMode = createMemo(() => kv.get("minimal_pure_mode") ?? false)
-  const autoAllowPermissions = createMemo(() => kv.get("minimal_permission_auto_allow") ?? vimConfig().autoAllowPermissions ?? false)
+  const vimHidePrompt = createMemo(() => vimConfig().hidePrompt ?? false)
+  const vimAutoResume = createMemo(() => vimConfig().autoResume ?? false)
+  const pureMode = createMemo(() => false)
+  const autoAllowPermissions = createMemo(() => vimConfig().autoAllowPermissions ?? false)
+  const sessions = () => data.session.list()
   let sent = false
+
+  // Keep the active location synchronized with the location store, without
+  // tracking its server data and reasserting the old route on each update.
+  createEffect(() => {
+    const target = location.ref ?? data.location.default()
+    untrack(() => location.set(target))
+  })
 
   onMount(() => {
     vimMode.enterInsert()
@@ -57,128 +66,100 @@ export function MinimalHome() {
   })
 
   const bind = (r: PromptRef | undefined) => {
-    setRef(r as MinimalPromptRef | undefined)
+    setRef(r)
     promptRef.set(r)
     if (seededHomePrompt || !r) return
-    if (routeData.prompt) {
-      r.set(routeData.prompt)
+    if (args.prompt) {
+      r.set({ text: args.prompt, files: [], agents: [], skills: [], pasted: [] })
       seededHomePrompt = true
-      return
     }
-    if (!args.prompt) return
-    r.set({ input: args.prompt, parts: [] })
-    seededHomePrompt = true
   }
 
-  // Initialize default agent/model if none selected
   createEffect(() => {
-    if (!sync.ready || !local.model.ready) return
-    
-    // If no agent selected, select the first available primary agent
+    const current = ref()
+    if (!current || !args.prompt || current.current.text !== args.prompt) return
+    if (!local.model.ready || !local.model.catalogReady) return
+    if (!local.agent.current() || !local.model.current()) return
+    if (sent) return
+    sent = true
+    current.submit()
+  })
+
+  // Initialize the default agent from the current V2 location store.
+  createEffect(() => {
+    const agents = data.location.agent.list(location.ref)
+    if (agents === undefined) return
     if (!local.agent.current()) {
-      const primaryAgents = local.agent.list().filter((a) => a.mode !== "subagent")
-      if (primaryAgents.length > 0) {
-        local.agent.set(primaryAgents[0]!.name)
-      }
+      const primaryAgents = agents.filter((agent) => agent.mode !== "subagent" && !agent.hidden)
+      if (primaryAgents.length > 0) local.agent.set(primaryAgents[0]!.name)
     }
   })
 
-  createEffect(() => {
-    const r = ref()
-    if (sent) return
-    if (!r) return
-    if (!sync.ready || !local.model.ready) return
-    if (!args.prompt) return
-    if (r.current.input !== args.prompt) return
-    sent = true
-    r.submit()
-  })
-
-  useBindings(() => ({
-    bindings: [
-      {
-        key: "ctrl+c",
-        cmd: () => {
-          const current = ref()
-          if (!current) return true
-          const hasDraft = current.current.input !== "" || current.current.parts.length > 0
-          if (hasDraft) {
-            current.reset()
-          }
-          if (current.focused === false) return true
-          setTimeout(() => current.focus(), 0)
-          return true
-        },
-      },
-    ],
+  Keymap.createLayer(() => ({
+    mode: "global",
     commands: [
       {
-        name: "session.toggle.thinking",
+        id: "vim.home.clearPrompt",
+        title: "Clear prompt",
+        bind: "ctrl+c",
+        run: () => {
+          const current = ref()
+          if (!current) return
+          const hasDraft = current.current.text !== "" || (current.current.files?.length ?? 0) > 0 || current.current.pasted.length > 0
+          if (hasDraft) current.reset()
+          if (current.focused === false) return
+          setTimeout(() => current.focus(), 0)
+        },
+      },
+      {
+        id: "session.toggle.thinking",
         title: "Toggle thinking mode",
         category: "Session",
         run: () => {
-          thinking.set(nextThinkingMode(thinking.mode()))
+          setThinkingMode(nextThinkingMode(thinkingMode()))
           dialog.clear()
         },
       },
       {
-        name: "vim.toggle.hidePrompt",
+        id: "vim.toggle.hidePrompt",
         title: "Toggle vim hide prompt",
         category: "Vim",
         run: () => {
           const next = !vimHidePrompt()
-          kv.set("minimal_vim_hide_prompt", next)
-          toast.show({
-            message: `Hide prompt: ${next ? "ON" : "OFF"}`,
-            variant: "info",
-            duration: 2000,
-          })
+          saveVimConfig(directory(), { hidePrompt: next })
+          toast.show({ message: `Hide prompt: ${next ? "ON" : "OFF"}`, variant: "info", duration: 2000 })
           dialog.clear()
         },
       },
       {
-        name: "vim.toggle.autoResume",
+        id: "vim.toggle.autoResume",
         title: "Toggle vim auto resume",
         category: "Vim",
         run: () => {
           const next = !vimAutoResume()
-          kv.set("minimal_vim_auto_resume", next)
-          toast.show({
-            message: `Auto resume: ${next ? "ON" : "OFF"}`,
-            variant: "info",
-            duration: 2000,
-          })
+          saveVimConfig(directory(), { autoResume: next })
+          toast.show({ message: `Auto resume: ${next ? "ON" : "OFF"}`, variant: "info", duration: 2000 })
           dialog.clear()
         },
       },
       {
-        name: "vim.toggle.pureMode",
+        id: "vim.toggle.pureMode",
         title: "Toggle pure mode",
         category: "Vim",
         run: () => {
           const next = !pureMode()
-          kv.set("minimal_pure_mode", next)
-          toast.show({
-            message: `Pure mode: ${next ? "ON" : "OFF"}`,
-            variant: "info",
-            duration: 2000,
-          })
+          toast.show({ message: `Pure mode: ${next ? "ON" : "OFF"}`, variant: "info", duration: 2000 })
           dialog.clear()
         },
       },
       {
-        name: "vim.toggle.autoAllowPermissions",
+        id: "vim.toggle.autoAllowPermissions",
         title: "Toggle auto-allow permissions",
         category: "Vim",
         run: () => {
           const next = !autoAllowPermissions()
-          kv.set("minimal_permission_auto_allow", next)
           saveVimConfig(directory(), { autoAllowPermissions: next })
-          toast.show({
-            message: `Auto-allow permissions: ${next ? "ON" : "OFF"}`,
-            variant: "info",
-            duration: 2000,
-          })
+          toast.show({ message: `Auto-allow permissions: ${next ? "ON" : "OFF"}`, variant: "info", duration: 2000 })
           dialog.clear()
         },
       },
@@ -186,21 +167,19 @@ export function MinimalHome() {
   }))
 
   createEffect(() => {
-    if (!sync.ready || sync.status === "loading") return
+    if (client.connection.status() !== "connected") return
     if (!vimAutoResume()) return
     const dir = directory()
-    const match = sync.data.session
-      .filter((s) => s.directory === dir && !s.parentID)
+    const match = sessions()
+      .filter((session) => !session.parentID && session.location?.directory === dir)
       .toSorted((a, b) => b.time.updated - a.time.updated)[0]
-    if (match) {
-      navigate({ type: "session", sessionID: match.id })
-    }
+    if (match) route.navigate({ type: "session", sessionID: match.id })
   })
 
   useVimHome(
-    () => ref(),
+    () => ref() as import("@/component/prompt").MinimalPromptRef | undefined,
     dialog,
-    () => directory(),
+    directory,
     leaderMenu,
   )
 
@@ -213,15 +192,8 @@ export function MinimalHome() {
         <MinimalStatusBar pureMode={pureMode()} />
         <box flexGrow={1} minHeight={0} flexDirection="column" justifyContent="center" alignItems="center">
           <Show when={!pureMode()}>
-            <text fg={theme.primary}>{`
- ██████╗  ██████╗    ██╗   ██╗██╗███╗   ███╗
-██╔═══██╗██╔════╝    ██║   ██║██║████╗ ████║
-██║   ██║██║         ██║   ██║██║██╔████╔██║
-██║   ██║██║         ╚██╗ ██╔╝██║██║╚██╔╝██║
-╚██████╔╝╚██████╗     ╚████╔╝ ██║██║ ╚═╝ ██║
- ╚═════╝  ╚═════╝      ╚═══╝  ╚═╝╚═╝     ╚═╝
-`}</text>
-            <text fg={theme.textMuted} marginTop={1}>opencode-vim · Powered by opencode</text>
+            <text fg={theme.categorical[0][500]}>{`\n ██████╗  ██████╗    ██╗   ██╗██╗███╗   ███╗\n██╔═══██╗██╔════╝    ██║   ██║██║████╗ ████║\n██║   ██║██║         ██║   ██║██║██╔████╔██║\n██║   ██║██║         ╚██╗ ██╔╝██║██║╚██╔╝██║\n╚██████╔╝╚██████╗     ╚████╔╝ ██║██║ ╚═╝ ██║\n ╚═════╝  ╚═════╝      ╚═══╝  ╚═╝╚═╝     ╚═╝\n`}</text>
+            <text fg={theme.text.muted} marginTop={1}>opencode-vim · Powered by opencode</text>
           </Show>
         </box>
         <MinimalHomePromptFooter bind={bind} placeholders={placeholder} />
