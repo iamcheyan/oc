@@ -1,2 +1,2 @@
-// Adapter for the upstream TUI bootstrap command used by opencode-vim.
-export { TuiThreadCommand } from "@opencode/cli/cmd/tui"
+// The legacy CLI thread command is no longer exported by the V2 TUI package.
+export const TuiThreadCommand = undefined

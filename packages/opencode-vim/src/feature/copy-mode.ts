@@ -1,7 +1,9 @@
 import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
-import type { Part } from "@opencode-ai/sdk/v2"
-import { displayCharAt } from "@opencode/cli/cmd/prompt-display"
+import type { SessionMessage } from "@opencode/schema"
+import { displayCharAt } from "@tui/prompt/display"
+
+type Part = { type: "text" | "reasoning" | "tool"; id?: string; name?: string; state?: { status: string } }
 
 // Structural shape of renderable nodes we traverse while copying. Covers the
 // union of Box/Text/Gutter renderables accessed here; some members are internal.
@@ -92,15 +94,18 @@ export function createCopyMode(input: {
         meta.set(msg.id, { role: "user", kind: "user" })
         continue
       }
+      let ordinal = 0
       for (const part of parts) {
-        if (part.type === "text") meta.set(`text-${part.id}`, { role: "assistant", kind: "text", part: part.id })
+        if (part.type === "text") {
+          meta.set(`text-${part.type}:${ordinal++}`, { role: "assistant", kind: "text" })
+        }
         if (part.type === "reasoning") {
           if (!input.thinking()) continue
-          meta.set(`text-${part.id}`, { role: "assistant", kind: "reasoning", part: part.id })
+          meta.set(`text-${part.type}:${ordinal++}`, { role: "assistant", kind: "reasoning" })
         }
         if (part.type === "tool") {
-          if (!input.details() && part.state.status === "completed") continue
-          meta.set(`tool-${part.id}`, { role: "assistant", kind: "tool", part: part.id, tool: part.tool })
+          if (!input.details() && part.state?.status === "completed") continue
+          meta.set(`tool-${part.id}`, { role: "assistant", kind: "tool", part: part.id, tool: part.name })
         }
       }
     }
@@ -234,67 +239,39 @@ export function createCopyMode(input: {
     const list = rows()
     if (!scroll || !list.length) return
 
-    // Special case: explicit jump to top - directly set scrollTop
     if (direction === "top") {
-      if (scroll.scrollTop !== 0) {
-        scroll.scrollTop = 0
-      }
+      if (scroll.scrollTop !== 0) scroll.scrollTop = 0
       const updatedList = rows()
-      if (updatedList.length) {
-        setIdx(0)
-      }
+      if (updatedList.length) setIdx(0)
       return
     }
 
-    // Special case: explicit jump to actual bottom (not just last known row)
-    // This handles streaming where new content is continuously added
     if (direction === "bottom") {
-      // Directly set scrollTop to the maximum to jump to true bottom
-      // scrollHeight includes all content, height is viewport size
       const targetScroll = Math.max(0, scroll.scrollHeight - scroll.height)
-      if (scroll.scrollTop !== targetScroll) {
-        scroll.scrollTop = targetScroll
-      }
-      // Re-collect rows after scroll to get the actual last row
+      if (scroll.scrollTop !== targetScroll) scroll.scrollTop = targetScroll
       const updatedList = rows()
-      if (updatedList.length) {
-        const lastIdx = updatedList.length - 1
-        setIdx(lastIdx)
-      }
+      if (updatedList.length) setIdx(updatedList.length - 1)
       return
     }
 
     const resolved = Math.max(0, Math.min(next, list.length - 1))
-
-    // Vim-like scrolling: if current row is at screen edge and moving
-    // in that direction, scroll before updating the index so the cursor
-    // stays at the edge and doesn't disappear off screen.
     if (direction) {
       const currentRow = list[idx()]
       if (currentRow) {
         const top = scroll.scrollTop
         const bottom = scroll.scrollTop + scroll.height - 1
-        if (direction === "up" && currentRow.y <= top && resolved < idx()) {
-          scroll.scrollBy(-1)
-        } else if (direction === "down" && currentRow.y >= bottom && resolved > idx()) {
-          scroll.scrollBy(1)
-        }
+        if (direction === "up" && currentRow.y <= top && resolved < idx()) scroll.scrollBy(-1)
+        if (direction === "down" && currentRow.y >= bottom && resolved > idx()) scroll.scrollBy(1)
       }
     }
-
     setIdx(resolved)
     const row = list[resolved]
     if (!row) return
-
-    // Clamp: ensure the new row is visible after scroll
     const y = row.y
     const top = scroll.scrollTop
     const bottom = scroll.scrollTop + scroll.height - 1
-    if (y < top) {
-      scroll.scrollBy(y - top)
-    } else if (y > bottom) {
-      scroll.scrollBy(y - bottom)
-    }
+    if (y < top) scroll.scrollBy(y - top)
+    if (y > bottom) scroll.scrollBy(y - bottom)
   }
 
   function pickVisibleTarget(list: CopyRow[], preferBottom = false) {
@@ -316,8 +293,7 @@ export function createCopyMode(input: {
       .map((row, nextIdx) => ({ row, nextIdx }))
       .filter((x) => x.row.id === target.id && x.row.kind === target.kind && x.row.role === target.role)
     if (!candidates.length) return -1
-    return candidates.reduce((a, b) => (Math.abs(a.row.line - target.line) < Math.abs(b.row.line - target.line) ? a : b))
-      .nextIdx
+    return candidates.reduce((a, b) => (Math.abs(a.row.line - target.line) < Math.abs(b.row.line - target.line) ? a : b)).nextIdx
   }
 
   function enter() {
@@ -333,28 +309,18 @@ export function createCopyMode(input: {
     setCol(copyMin(row))
     const scroll = input.scroll()
     if (!scroll) return
-    const top = scroll.scrollTop
-    const bottom = scroll.scrollTop + scroll.height - 1
-    if (row.y < top || row.y > bottom) {
-      sync(resolved)
-    }
+    if (row.y < scroll.scrollTop || row.y > scroll.scrollTop + scroll.height - 1) sync(resolved)
   }
 
   function exit() {
-    // 保存当前滚动位置，防止退出时重置
     const scroll = input.scroll()
     const savedScrollTop = scroll?.scrollTop
-    
     lastCursor = row()
     setFollow(false)
     setActive(false)
-    
-    // 恢复滚动位置
     if (scroll && savedScrollTop !== undefined) {
       queueMicrotask(() => {
-        if (scroll.scrollTop !== savedScrollTop) {
-          scroll.scrollTop = savedScrollTop
-        }
+        if (scroll.scrollTop !== savedScrollTop) scroll.scrollTop = savedScrollTop
       })
     }
   }
@@ -366,8 +332,7 @@ export function createCopyMode(input: {
       const delta = action === "up" ? -1 : 1
       sync(idx() + delta, action)
       const nextRow = row()
-      if (!nextRow) return
-      setCol(resolveStick(nextRow, stick()))
+      if (nextRow) setCol(resolveStick(nextRow, stick()))
       return
     }
     const currentRow = row()
@@ -434,12 +399,8 @@ export function createCopyMode(input: {
     let target = -1
     if (currentRow.y < top && first >= 0) target = first
     if (currentRow.y > bottom && last >= 0) target = last
-    if (target < 0 && delta > 0) {
-      target = list.findIndex((r) => r.y > bottom)
-    }
-    if (target < 0 && delta < 0) {
-      target = list.findLastIndex((r) => r.y < top)
-    }
+    if (target < 0 && delta > 0) target = list.findIndex((r) => r.y > bottom)
+    if (target < 0 && delta < 0) target = list.findLastIndex((r) => r.y < top)
     if (target < 0) return
     setIdx(target)
     const nextRow = list[target]
@@ -451,18 +412,14 @@ export function createCopyMode(input: {
     const list = rows()
     if (!list.length) return
     const lastIdx = list.length - 1
-    if (idx() !== lastIdx) {
-      sync(lastIdx, "bottom")
-    }
+    if (idx() !== lastIdx) sync(lastIdx, "bottom")
   })
 
   function setFromY(y: number) {
     const list = rows()
     if (!list.length) return
     let target = list.findIndex((row) => row.y === y)
-    if (target < 0) {
-      target = list.findLastIndex((row) => row.y <= y)
-    }
+    if (target < 0) target = list.findLastIndex((row) => row.y <= y)
     if (target < 0) target = 0
     setIdx(target)
     const nextRow = list[target]
@@ -486,24 +443,11 @@ export function createCopyMode(input: {
     let start = 0
     for (const seg of segmenter.segment(text)) {
       const width = Bun.stringWidth(seg.segment === "\n" ? " " : seg.segment) || 1
-      if (relative >= start && relative < start + width) {
-        return { text: seg.segment, start, width }
-      }
+      if (relative >= start && relative < start + width) return { text: seg.segment, start, width }
       start += width
     }
     return { text: grapheme, start: relative, width: Math.max(1, Bun.stringWidth(grapheme)) }
   })
 
-  return {
-    enter,
-    exit,
-    move,
-    jump,
-    clamp,
-    setFromY,
-    row,
-    cursor,
-    active,
-    col,
-  }
+  return { enter, exit, move, jump, clamp, setFromY, row, cursor, active, col }
 }

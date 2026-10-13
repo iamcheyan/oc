@@ -1,8 +1,7 @@
 import { createContext } from "solid-js"
-import type { Provider } from "@opencode-ai/sdk/v2"
+import type { Provider } from "@opencode/schema"
+import type { useConfig } from "@tui/config"
 import type { ThinkingMode } from "@tui/context/thinking"
-import type { useSync } from "@tui/context/sync"
-import type { useTuiConfig } from "@tui/config"
 
 export type SessionContextValue = {
   width: number
@@ -14,9 +13,10 @@ export type SessionContextValue = {
   showDetails: () => boolean
   showGenericToolOutput: () => boolean
   diffWrapMode: () => "word" | "none"
-  providers: () => ReadonlyMap<string, Provider>
-  sync: ReturnType<typeof useSync>
-  tui: ReturnType<typeof useTuiConfig>
+  providers: () => ReadonlyMap<string, unknown>
+  sync: unknown
+  tui: unknown
+  config: ReturnType<typeof useConfig>
 }
 
 export const SessionContext = createContext<SessionContextValue>()

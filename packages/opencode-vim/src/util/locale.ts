@@ -1,1 +1,1 @@
-export * from "../../../opencode/src/util/locale"
+export * from "@tui/util/locale"
