@@ -1,7 +1,8 @@
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { createMemo, createResource } from "solid-js"
 import { useDialog } from "@tui/ui/dialog"
-import { useSDK } from "@tui/context/sdk"
+import { useData } from "@tui/context/data"
+import { useLocation } from "@tui/context/location"
 
 export type DialogSkillProps = {
   onSelect: (skill: string) => void
@@ -10,12 +11,15 @@ export type DialogSkillProps = {
 
 export function DialogSkill(props: DialogSkillProps) {
   const dialog = useDialog()
-  const sdk = useSDK()
+  const data = useData()
+  const location = useLocation()
   dialog.setSize("large")
 
   const [skills] = createResource(async () => {
-    const result = await sdk.client.app.skills()
-    return result.data ?? []
+    const current = data.location.skill.list(location.ref)
+    if (current) return current
+    await data.location.skill.sync(location.ref)
+    return data.location.skill.list(location.ref) ?? []
   })
 
   const options = createMemo<DialogSelectOption<string>[]>(() => {
@@ -32,10 +36,10 @@ export function DialogSkill(props: DialogSkillProps) {
     return filtered.map((skill) => ({
       title: skill.name.padEnd(maxWidth),
       description: skill.description?.replace(/\s+/g, " ").trim(),
-      value: skill.name,
+      value: skill.id,
       category: "Skills",
       onSelect: () => {
-        props.onSelect(skill.name)
+        props.onSelect(skill.id)
         dialog.clear()
       },
     }))

@@ -1,5 +1,5 @@
 import { createMemo } from "solid-js"
-import { useDirectory } from "@tui/context/directory"
+import { useLocation } from "@tui/context/location"
 import {
   loadLeaderMenuConfig,
   binaryExists,
@@ -286,6 +286,6 @@ export function getLeaderMenu(projectDir: string): LeaderGroup[] {
 }
 
 export function useLeaderMenu(): LeaderGroup[] {
-  const directory = useDirectory()
-  return createMemo(() => getLeaderMenu(directory()))()
+  const location = useLocation()
+  return createMemo(() => getLeaderMenu(location.ref?.directory ?? process.cwd()))()
 }

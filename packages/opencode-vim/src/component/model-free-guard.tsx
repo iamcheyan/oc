@@ -1,17 +1,30 @@
 import { createEffect } from "solid-js"
 import { useLocal } from "@tui/context/local"
-import { useSync } from "@tui/context/sync"
+import { useData } from "@tui/context/data"
+import { useLocation } from "@tui/context/location"
 import { findFreeModel, isForcedFreeOnly, isModelFree } from "@/config/model-filter"
 
 export function ModelFreeGuard() {
   const local = useLocal()
-  const sync = useSync()
+  const data = useData()
+  const location = useLocation()
+
+  const models = () => data.location.model.list(location.ref)
+  const providers = () =>
+    (data.location.provider.list(location.ref) ?? []).map((provider) => ({
+      id: provider.id,
+      models: Object.fromEntries(
+        (data.location.model.list(location.ref) ?? [])
+          .filter((model) => model.providerID === provider.id)
+          .map((model) => [model.modelID, model]),
+      ),
+    }))
 
   createEffect(() => {
-    if (!sync.ready || !local.model.ready) return
+    if (!local.model.ready) return
     if (!isForcedFreeOnly()) return
-    if (isModelFree(sync.data.provider, local.model.current())) return
-    const model = findFreeModel(sync.data.provider)
+    if (isModelFree(models(), local.model.current())) return
+    const model = findFreeModel(providers())
     if (!model) return
     local.model.set(model, { recent: true })
   })

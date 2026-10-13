@@ -9,16 +9,14 @@ describe("minimal theme overrides", () => {
     const { applyMinimalThemeOverrides } = await import("../src/util/theme-minimal")
 
     const opaque = RGBA.fromInts(10, 20, 30, 255)
-    const theme = {
-      background: opaque,
-      selectedListItemText: opaque,
-      _hasSelectedListItemText: true,
-    }
-
-    const patched = applyMinimalThemeOverrides(theme)
-    expect(patched.background.a).toBe(0)
-    expect(patched.selectedListItemText).toBe(opaque)
-    expect(patched._hasSelectedListItemText).toBe(true)
+    const patched = applyMinimalThemeOverrides({
+      background: { base: opaque, raised: { base: opaque, high: opaque, max: opaque }, action: {}, formfield: {}, feedback: {} },
+      text: { base: opaque, muted: opaque, action: {}, formfield: {}, feedback: {} },
+      border: { base: opaque },
+      scrollbar: { base: opaque },
+    })
+    expect(patched.background.base.a).toBe(0)
+    expect(patched.background.raised.base).toBe(opaque)
 
     process.env.OPENCODE_MINIMAL = prev
   })
@@ -31,14 +29,14 @@ describe("minimal theme overrides", () => {
 
     const fallback = RGBA.fromInts(0, 0, 0, 255)
     const patched = applyMinimalThemeOverrides({
-      background: fallback,
-      selectedListItemText: fallback,
-      _hasSelectedListItemText: false,
+      background: { base: fallback, raised: { base: fallback, high: fallback, max: fallback }, action: {}, formfield: {}, feedback: {} },
+      text: { base: fallback, muted: fallback, action: {}, formfield: {}, feedback: {} },
+      border: { base: fallback },
+      scrollbar: { base: fallback },
     })
 
-    expect(patched.background.a).toBe(0)
-    expect(patched.selectedListItemText).toBe(fallback)
-    expect(patched._hasSelectedListItemText).toBe(false)
+    expect(patched.background.base.a).toBe(0)
+    expect(patched.background.raised.base).toBe(fallback)
 
     process.env.OPENCODE_MINIMAL = prev
   })

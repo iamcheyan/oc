@@ -6,6 +6,7 @@ export type VimConfig = {
   hidePrompt?: boolean
   autoResume?: boolean
   autoAllowPermissions?: boolean
+  enterFocusPrompt?: boolean
 }
 
 function findConfigFile(projectDir: string): string | null {
@@ -27,7 +28,7 @@ export function loadVimConfig(projectDir: string): VimConfig {
     const cleaned = stripJsonComments(raw)
     const parsed = JSON.parse(cleaned)
     if (parsed && typeof parsed === "object" && "vim" in parsed && typeof parsed.vim === "object" && parsed.vim) {
-      return { hidePrompt: parsed.vim.hidePrompt === true, autoResume: parsed.vim.autoResume === true, autoAllowPermissions: parsed.vim.autoAllowPermissions === true }
+      return { hidePrompt: parsed.vim.hidePrompt === true, autoResume: parsed.vim.autoResume === true, autoAllowPermissions: parsed.vim.autoAllowPermissions === true, enterFocusPrompt: typeof parsed.vim.enterFocusPrompt === "boolean" ? parsed.vim.enterFocusPrompt : undefined }
     }
   } catch {
     // ignore parse errors, fall back to defaults
@@ -52,6 +53,7 @@ export function saveVimConfig(projectDir: string, config: VimConfig): void {
     if (config.hidePrompt !== undefined) (existing.vim as Record<string, unknown>).hidePrompt = config.hidePrompt
     if (config.autoResume !== undefined) (existing.vim as Record<string, unknown>).autoResume = config.autoResume
     if (config.autoAllowPermissions !== undefined) (existing.vim as Record<string, unknown>).autoAllowPermissions = config.autoAllowPermissions
+    if (config.enterFocusPrompt !== undefined) (existing.vim as Record<string, unknown>).enterFocusPrompt = config.enterFocusPrompt
   }
   writeFileSync(filePath, JSON.stringify(existing, null, 2) + "\n", "utf-8")
 }
