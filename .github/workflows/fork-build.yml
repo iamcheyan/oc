@@ -39,8 +39,11 @@ jobs:
       - name: Check upstream seam allowlist
         run: bash fork/check-upstream-seams.sh
 
-      - name: Build upstream CLI and Vim plugin
+      - name: Build upstream CLI
         run: bash fork/build.sh
+
+      - name: Build Vim plugin
+        run: bun run fork/build-vim-plugin.ts
 
       - name: Host resolve and load check
         run: bun run fork/check-plugin-load.mjs
