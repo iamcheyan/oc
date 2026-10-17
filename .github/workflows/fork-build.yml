@@ -58,7 +58,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -74,19 +74,63 @@ jobs:
       - name: Package release assets
         run: |
           set -euo pipefail
+          linux="artifacts/fork-build-linux-x64-${GITHUB_SHA}/packages/cli/dist/cli-linux-x64/bin/opencode"
+          macos="artifacts/fork-build-macos-arm64-${GITHUB_SHA}/packages/cli/dist/cli-darwin-arm64/bin/opencode"
           bundle="artifacts/fork-build-linux-x64-${GITHUB_SHA}/fork/dist/plugin"
+          test -x "$linux"
+          test -x "$macos"
           test -f "$bundle/index.js"
           test -f "$bundle/tui.js"
           test -f "$bundle/package.json"
-          tar -czf "opencode-vim-plugin.tar.gz" -C "$bundle" .
-          tar -tzf "opencode-vim-plugin.tar.gz" | grep -q '^\./tui.js$'
-          tar -xOf "opencode-vim-plugin.tar.gz" ./package.json | python3 -c 'import json,sys;x=json.load(sys.stdin);assert x["exports"]["./tui"]=="./tui.js"'
+          mkdir -p release/linux-x64 release/darwin-arm64
+          cp "$linux" release/linux-x64/opencode
+          cp "$macos" release/darwin-arm64/opencode
+          cp -R "$bundle" release/linux-x64/vim-plugin
+          cp -R "artifacts/fork-build-macos-arm64-${GITHUB_SHA}/fork/dist/plugin" release/darwin-arm64/vim-plugin
+          cat > release/linux-x64/opencode-vim <<'LAUNCHER'
+          #!/bin/sh
+          set -eu
+          dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+          plugin_url=$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "$dir/vim-plugin/package.json")
+          export OPENCODE_CONFIG_CONTENT="{\"plugin\":[\"$plugin_url\"]}"
+          exec "$dir/opencode" "$@"
+          LAUNCHER
+          cp release/linux-x64/opencode-vim release/darwin-arm64/opencode-vim
+          chmod 755 release/linux-x64/opencode-vim release/darwin-arm64/opencode-vim
+          cat > release/linux-x64/README.txt <<'NOTES'
+          Run ./opencode-vim from this directory. The launcher loads the bundled Vim TUI plugin.
+          On the standard OpenCode home screen, press g g to open the Vim home view.
+          NOTES
+          cp release/linux-x64/README.txt release/darwin-arm64/README.txt
+          tar -czf opencode-vim-linux-x64.tar.gz -C release/linux-x64 .
+          tar -czf opencode-vim-darwin-arm64.tar.gz -C release/darwin-arm64 .
+          tar -tzf opencode-vim-linux-x64.tar.gz | grep -q '^./opencode$'
+          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -q '^./opencode$'
+          tar -tzf opencode-vim-linux-x64.tar.gz | grep -q '^./opencode-vim$'
+          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -q '^./opencode-vim$'
+          tar -tzf opencode-vim-linux-x64.tar.gz | grep -q '^./vim-plugin/tui.js$'
+          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -q '^./vim-plugin/tui.js$'
+          tar -czf opencode-vim-plugin.tar.gz -C "$bundle" .
+          tar -tzf opencode-vim-plugin.tar.gz | grep -q '^\./tui.js$'
+          tar -xOf opencode-vim-plugin.tar.gz ./package.json | python3 -c 'import json,sys;x=json.load(sys.stdin);assert x["exports"]["./tui"]=="./tui.js"'
 
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber \
-            opencode-vim-plugin.tar.gz
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            release_tag="v$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}"
+          else
+            release_tag="$GITHUB_REF_NAME"
+          fi
+          if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$release_tag" --repo "$GITHUB_REPOSITORY" --clobber \
+              opencode-vim-linux-x64.tar.gz opencode-vim-darwin-arm64.tar.gz opencode-vim-plugin.tar.gz
+          else
+            gh release create "$release_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "OpenCode Vim $release_tag" \
+              --notes "Automated OpenCode upstream sync with the Vim TUI integration. Binaries: Linux x64 and macOS arm64." \
+              --latest \
+              opencode-vim-linux-x64.tar.gz opencode-vim-darwin-arm64.tar.gz opencode-vim-plugin.tar.gz
+          fi
