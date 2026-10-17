@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 
-const root = path.resolve(import.meta.dirname, "..")
+const root = path.resolve(import.meta.dirname, "../../..")
 const pkg = path.join(root, "packages/opencode-vim")
 const outdir = path.resolve(root, process.argv.find((arg) => arg.startsWith("--outdir="))?.slice("--outdir=".length) ?? "fork/dist/plugin")
 if (outdir === pkg || outdir.startsWith(pkg + path.sep)) throw new Error("--outdir must be outside packages/opencode-vim")
