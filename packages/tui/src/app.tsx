@@ -1408,6 +1408,24 @@ function App() {
         if (copyOnSelectEnabled()) Selection.copyOnSelectRelease(event, renderer, toast, clipboard)
       }}
     >
+      <box
+        flexGrow={1}
+        minHeight={0}
+        flexDirection="row"
+        position="relative"
+        onMouseDrag={tabsResize.onMouseDrag}
+        onMouseDragEnd={tabsResize.onMouseDragEnd}
+        onMouseUp={tabsResize.onMouseUp}
+      >
+        <Show when={verticalTabsVisible()}>
+          <SessionTabs orientation="vertical" width={tabsResize.size()} />
+        </Show>
+        <box flexGrow={1} minWidth={0} flexDirection="column">
+          <Show when={plugins.ready()}>
+            <box flexGrow={1} minHeight={0} flexDirection="column">
+              <Show when={tabsVisible() && !tabsVertical()}>
+                <SessionTabs />
+              </Show>
               <Switch>
                 <Match when={route.data.type === "home"}>
                   {(() => {
@@ -1423,29 +1441,6 @@ function App() {
                       const View = (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS?.Session ?? SessionFrame
                       return <View sessionID={sessionID} verticalTabsWidth={verticalTabsVisible() ? tabsResize.size() : 0} />
                     }}
-                  </Show>
-                </Match>
-                <Match when={route.data.type === "plugin"}>
-                  <PluginRoute
-                    fallback={(id, name) => (
-                      <PluginRouteMissing id={id} name={name} onHome={() => route.navigate({ type: "home" })} />
-                    )}
-                  />
-                </Match>
-              </Switch>
-              </Show>
-              <Switch>
-                <Match when={route.data.type === "home"}>
-                  <Home />
-                </Match>
-                <Match when={route.data.type === "session"}>
-                  <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
-                    {(sessionID) => (
-                      <SessionFrame
-                        sessionID={sessionID}
-                        verticalTabsWidth={verticalTabsVisible() ? tabsResize.size() : 0}
-                      />
-                    )}
                   </Show>
                 </Match>
                 <Match when={route.data.type === "plugin"}>
