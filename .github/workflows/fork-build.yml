@@ -80,6 +80,7 @@ jobs:
           bundle="artifacts/fork-build-linux-x64-${GITHUB_SHA}/fork/dist/plugin"
           echo "linux=$linux"
           echo "macos=$macos"
+          chmod 755 "$linux" "$macos"
           ls -l "$linux" "$macos"
           test -x "$linux"
           test -x "$macos"
