@@ -21,9 +21,15 @@ const result = await Bun.build({
   plugins: [createSolidTransformPlugin()],
   conditions: ["bun"],
   target: "bun",
+  external: [
+    "@opencode/plugin",
+    "@opencode/tui",
+    ...["darwin-arm64", "darwin-x64", "linux-arm64", "linux-arm64-musl", "linux-x64", "linux-x64-musl", "win32-arm64", "win32-x64"].map(
+      (target) => `@opentui/core-${target}`,
+    ),
+  ],
   format: "esm",
   splitting: false,
-  external: ["@opencode/plugin", "@opencode/tui"],
 })
 if (!result.success) {
   for (const log of result.logs) console.error(log)
