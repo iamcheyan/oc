@@ -75,9 +75,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          linux="artifacts/fork-build-linux-x64-${GITHUB_SHA}/packages/cli/dist/cli-linux-x64/bin/opencode"
-          macos="artifacts/fork-build-macos-arm64-${GITHUB_SHA}/packages/cli/dist/cli-darwin-arm64/bin/opencode"
+          linux=$(find "artifacts/fork-build-linux-x64-${GITHUB_SHA}" -type f -path '*/bin/opencode' | head -1)
+          macos=$(find "artifacts/fork-build-macos-arm64-${GITHUB_SHA}" -type f -path '*/bin/opencode' | head -1)
           bundle="artifacts/fork-build-linux-x64-${GITHUB_SHA}/fork/dist/plugin"
+          echo "linux=$linux"
+          echo "macos=$macos"
+          ls -l "$linux" "$macos"
           test -x "$linux"
           test -x "$macos"
           test -f "$bundle/index.js"
