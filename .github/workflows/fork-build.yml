@@ -104,12 +104,12 @@ jobs:
           cp release/linux-x64/README.txt release/darwin-arm64/README.txt
           tar -czf opencode-vim-linux-x64.tar.gz -C release/linux-x64 .
           tar -czf opencode-vim-darwin-arm64.tar.gz -C release/darwin-arm64 .
-          tar -tzf opencode-vim-linux-x64.tar.gz | grep -q '^./opencode$'
-          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -q '^./opencode$'
-          tar -tzf opencode-vim-linux-x64.tar.gz | grep -q '^./opencode-vim$'
-          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -q '^./opencode-vim$'
-          tar -tzf opencode-vim-linux-x64.tar.gz | grep -q '^./vim-plugin/tui.js$'
-          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -q '^./vim-plugin/tui.js$'
+          tar -tzf opencode-vim-linux-x64.tar.gz | grep -Eq '(^|/)opencode$'
+          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -Eq '(^|/)opencode$'
+          tar -tzf opencode-vim-linux-x64.tar.gz | grep -Eq '(^|/)opencode-vim$'
+          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -Eq '(^|/)opencode-vim$'
+          tar -tzf opencode-vim-linux-x64.tar.gz | grep -Eq '(^|/)vim-plugin/tui.js$'
+          tar -tzf opencode-vim-darwin-arm64.tar.gz | grep -Eq '(^|/)vim-plugin/tui.js$'
           tar -czf opencode-vim-plugin.tar.gz -C "$bundle" .
           tar -tzf opencode-vim-plugin.tar.gz | grep -q '^\./tui.js$'
           tar -xOf opencode-vim-plugin.tar.gz ./package.json | python3 -c 'import json,sys;x=json.load(sys.stdin);assert x["exports"]["./tui"]=="./tui.js"'
