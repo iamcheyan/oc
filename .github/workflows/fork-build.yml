@@ -87,20 +87,32 @@ jobs:
           cp "$macos" release/darwin-arm64/opencode
           cp -R "$bundle" release/linux-x64/vim-plugin
           cp -R "artifacts/fork-build-macos-arm64-${GITHUB_SHA}/fork/dist/plugin" release/darwin-arm64/vim-plugin
-          cat > release/linux-x64/opencode-vim <<'LAUNCHER'
+          python3 - <<'PY'
+          import json
+          script = '''#!/bin/sh
+          set -eu
+          dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          exec "$dir/plugin-run" "$@"
+          '''
+          for target in ("linux-x64", "darwin-arm64"):
+              path = f"release/{target}/plugin-run"
+              with open(path, "w", encoding="utf-8") as handle:
+                  handle.write(script)
+          PY
+          for target in linux-x64 darwin-arm64; do
+            cat > "release/$target/opencode-vim" <<'LAUNCHER'
           #!/bin/sh
           set -eu
           dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-          plugin_url=$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "$dir/vim-plugin/package.json")
-          export OPENCODE_CONFIG_CONTENT="{\"plugin\":[\"$plugin_url\"]}"
+          export OPENCODE_CONFIG_CONTENT="{\"plugin\":[\"file://$dir/vim-plugin\"]}"
           exec "$dir/opencode" "$@"
           LAUNCHER
-          cp release/linux-x64/opencode-vim release/darwin-arm64/opencode-vim
+            cp "release/$target/opencode-vim" "release/$target/vim"
+            chmod 755 "release/$target/vim"
+            rm -f "release/$target/plugin-run"
+          done
           chmod 755 release/linux-x64/opencode-vim release/darwin-arm64/opencode-vim
-          cat > release/linux-x64/README.txt <<'NOTES'
-          Run ./opencode-vim from this directory. The launcher loads the bundled Vim TUI plugin.
-          On the standard OpenCode home screen, press g g to open the Vim home view.
-          NOTES
+          printf '%s\n' 'Run ./opencode-vim from this directory. The launcher loads the bundled Vim TUI plugin.' 'On the standard OpenCode home screen, press g g to open the Vim home view.' > release/linux-x64/README.txt
           cp release/linux-x64/README.txt release/darwin-arm64/README.txt
           tar -czf opencode-vim-linux-x64.tar.gz -C release/linux-x64 .
           tar -czf opencode-vim-darwin-arm64.tar.gz -C release/darwin-arm64 .
