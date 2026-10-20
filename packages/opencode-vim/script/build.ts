@@ -49,8 +49,8 @@ await Bun.write(
       },
       opencode: { type: "tui-plugin", id: "opencode.vim" },
       dependencies: {
-        "@opentui/core": "0.5.17",
-        "@opentui/solid": "0.5.17",
+        "@opentui/core": "0.6.6",
+        "@opentui/solid": "0.6.6",
         "solid-js": "1.9.15",
       },
     },
@@ -67,7 +67,7 @@ try {
   await mkdir(path.dirname(bundle), { recursive: true })
   await cp(outdir, bundle, { recursive: true })
 
-  const expectedVersions = { "@opentui/core": "0.5.17", "@opentui/solid": "0.5.17", "solid-js": "1.9.15" }
+  const expectedVersions = { "@opentui/core": "0.6.6", "@opentui/solid": "0.6.6", "solid-js": "1.9.15" }
   for (const [name, version] of Object.entries(expectedVersions)) {
     const scope = name.replaceAll("/", "+")
     const candidates = [...new Bun.Glob(`${scope}@*/node_modules/${name}/package.json`).scanSync({ cwd: path.join(root, "node_modules/.bun") })]
@@ -101,4 +101,3 @@ try {
 } finally {
   await rm(installRoot, { recursive: true, force: true })
 }
-
