@@ -1,4 +1,4 @@
-import type { BoxRenderable, TextareaRenderable, ScrollBoxRenderable } from "@opentui/core"
+import { measureEditText, type BoxRenderable, type TextareaRenderable, type ScrollBoxRenderable, type WidthMethod } from "@opentui/core"
 import { pathToFileURL } from "bun"
 import fuzzysort from "fuzzysort"
 import path from "path"
@@ -12,19 +12,30 @@ import { useTuiPaths } from "@tui/context/runtime"
 import { getScrollAcceleration } from "@tui/util/scroll"
 import { useConfig } from "@tui/config"
 import { useForkTheme, selectedForeground } from "@/util/theme"
-import { useTerminalDimensions } from "@opentui/solid"
+import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { Locale } from "@/util/locale"
 import type { PromptInfo, PromptPartRef } from "@tui/prompt/history"
 import { useFrecency } from "@tui/prompt/frecency"
 import { Keymap } from "@tui/context/keymap"
 import { useBindings } from "@opentui/keymap/solid"
-import { displayCharAt, mentionTriggerIndex, slashTriggerIndex } from "@tui/prompt/display"
+import { mentionTriggerIndex } from "@tui/prompt/display"
 import { useVimMode } from "@/feature/vim-mode"
 import { stringWidth } from "@tui/util/string-width"
 import { parseFileLineRange, stripFileLineRange } from "@tui/prompt/parse"
 import type { FileSystemEntry } from "@opencode/client"
 import type { KeymapCommand } from "@opencode/plugin/tui/context"
 import { Skill } from "@opencode/schema"
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" })
+
+function displayCharAt(value: string, offset: number, widthMethod: WidthMethod) {
+  let width = 0
+  for (const part of graphemes.segment(value)) {
+    const next = width + measureEditText(part.segment, { widthMethod })
+    if (offset < next) return part.segment
+    width = next
+  }
+}
 
 function removeLineRange(input: string) {
   const hashIndex = input.lastIndexOf("#")
@@ -85,6 +96,7 @@ export function Autocomplete(props: {
   const keymapCommands = Keymap.useCommands()
   const theme = useForkTheme().theme
   const dimensions = useTerminalDimensions()
+  const renderer = useRenderer()
   const frecency = useFrecency()
   const config = useConfig().data
   const paths = useTuiPaths()
@@ -161,7 +173,7 @@ export function Autocomplete(props: {
     const input = props.input()
     const currentCursorOffset = input.cursorOffset
 
-    const charAfterCursor = displayCharAt(props.value, currentCursorOffset)
+    const charAfterCursor = displayCharAt(props.value, currentCursorOffset, renderer.widthMethod)
     const needsSpace = charAfterCursor !== " "
     const prefix = "@"
     const append = prefix + text + (needsSpace ? " " : "")
@@ -600,7 +612,7 @@ export function Autocomplete(props: {
         const offset = props.input().cursorOffset
         if (offset === 0) return
         if (value.startsWith("/") && !value.slice(0, offset).match(/\s/)) { show("/"); setStore("index", 0); return }
-        const index = mentionTriggerIndex(value, offset)
+        const index = mentionTriggerIndex(props.input().getTextRange(0, offset), renderer.widthMethod)
         if (index !== undefined) { show("@"); setStore("index", index) }
       },
       hide,

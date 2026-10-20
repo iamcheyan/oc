@@ -1,7 +1,6 @@
 import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import type { SessionMessage } from "@opencode/schema"
-import { displayCharAt } from "@tui/prompt/display"
 
 type Part = { type: "text" | "reasoning" | "tool"; id?: string; name?: string; state?: { status: string } }
 
@@ -439,14 +438,13 @@ export function createCopyMode(input: {
     if (!currentRow) return { text: " ", start: 0, width: 1 }
     const text = rowText(currentRow)
     const relative = Math.max(0, col() - copyMin(currentRow))
-    const grapheme = displayCharAt(text, relative) ?? " "
     let start = 0
     for (const seg of segmenter.segment(text)) {
       const width = Bun.stringWidth(seg.segment === "\n" ? " " : seg.segment) || 1
       if (relative >= start && relative < start + width) return { text: seg.segment, start, width }
       start += width
     }
-    return { text: grapheme, start: relative, width: Math.max(1, Bun.stringWidth(grapheme)) }
+    return { text: " ", start: relative, width: 1 }
   })
 
   return { enter, exit, move, jump, clamp, setFromY, row, cursor, active, col }

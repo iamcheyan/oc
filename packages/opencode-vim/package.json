@@ -19,7 +19,6 @@
     "@opencode/schema": "workspace:*",
     "bedrock-scanner": "workspace:*",
     "fuzzysort": "catalog:",
-    "opentui-spinner": "catalog:",
     "remeda": "catalog:",
     "solid-js": "catalog:"
   },

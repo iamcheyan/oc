@@ -353,7 +353,6 @@ export function Prompt(props: PromptProps) {
     setTimeout(() => {
       // setTimeout is a workaround and needs to be addressed properly
       if (!input || input.isDestroyed) return
-      input.getLayoutNode().markDirty()
       input.gotoBufferEnd()
       renderer.requestRender()
     }, 0)
@@ -561,7 +560,6 @@ export function Prompt(props: PromptProps) {
       input.insertText(text)
       setTimeout(() => {
         if (!input || input.isDestroyed) return
-        input.getLayoutNode().markDirty()
         renderer.requestRender()
       }, 0)
     },
@@ -1138,7 +1136,6 @@ export function Prompt(props: PromptProps) {
 
     setTimeout(() => {
       if (!input || input.isDestroyed) return
-      input.getLayoutNode().markDirty()
       renderer.requestRender()
     }, 0)
   }
