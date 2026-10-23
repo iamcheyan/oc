@@ -18,7 +18,6 @@ import { TextPart, ReasoningPart } from "@tui/routes/session/message-parts"
 import { PermissionPrompt } from "@tui/routes/session/permission"
 import { FormPrompt } from "@tui/routes/session/form"
 import { errorMessage } from "@tui/util/error"
-import { sessionEpilogue } from "@tui/util/presentation"
 import { SessionContext } from "@/context/session-context"
 import { MinimalRendererBackground } from "@/util/theme"
 import { MinimalSessionPromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
@@ -105,8 +104,8 @@ export function MinimalSession(props: { sessionID: string }) {
     })
   })
 
-  createEffect(() => setEpilogue(sessionEpilogue({ title: session()?.title ?? "", sessionID: session()?.id })))
-  onCleanup(() => setEpilogue())
+  createEffect(() => setEpilogue.session({ title: session()?.title ?? "", sessionID: session()?.id }))
+  onCleanup(() => setEpilogue.session())
   createEffect(() => {
     if (local.agent.current()) return
     const agent = (data.location.agent.list(session()?.location ?? location.ref) ?? []).find((item) => item.mode !== "subagent" && !item.hidden)
