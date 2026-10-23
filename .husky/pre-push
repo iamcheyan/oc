@@ -1,5 +1,9 @@
 #!/bin/sh
 set -e
+# Privacy scan: block pushes containing tokens, API keys, personal paths.
+# Findings are reported by category and location only, never the matched value.
+python3 "$(dirname "$0")/privacy-scan.py" --push
+
 # Check if bun version matches package.json
 # keep in sync with packages/script/src/index.ts semver qualifier
 bun -e '
