@@ -122,9 +122,11 @@ main() {
   cd "$ROOT_DIR"
   bun install --ignore-scripts --frozen-lockfile || bun install --ignore-scripts
 
+  local cli_pkg_version
+  cli_pkg_version="$(bun -e "console.log(require('./packages/cli/package.json').version)" 2>/dev/null || echo "2.1.4")"
+  export OPENCODE_VERSION="${OPENCODE_VERSION:-$cli_pkg_version}"
   local version
-  version="$(cd "$ROOT_DIR" && git describe --tags --always 2>/dev/null || echo "0.0.0-dev")"
-  version="${version#v}"
+  version="$OPENCODE_VERSION"
   echo -e "${DIM}Version: $version${RESET}"
 
   echo -e "${DIM}Building opencode-vim TUI plugin bundle...${RESET}"

@@ -41,7 +41,7 @@ is_seam() {
 
 is_fork_owned() {
   case "$1" in
-    fork/* | packages/opencode-vim/* | packages/miniapps/* | packages/bedrock-scanner/* | .oc/* | .opencode/* | .husky/*)
+    fork/* | packages/opencode-vim/* | packages/miniapps/* | packages/bedrock-scanner/* | site/* | .oc/* | .opencode/* | .husky/*)
       return 0
       ;;
     packages/web/* | packages/ui/*)
@@ -65,7 +65,7 @@ is_fork_owned() {
     scripts/*)
       return 0
       ;;
-    README.md | README.*.md | AGENTS.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml | .github/workflows/close-issues.yml | .github/workflows/close-prs.yml | sqlc.yaml | sst.config.ts | sst-env.d.ts | tsconfig.json | turbo.json | screenshot-uk.png)
+    README.md | README.*.md | AGENTS.md | package.json | bun.lock | .gitignore | .opencode/.gitignore | .github/workflows/fork-build.yml | .github/workflows/opencode-vim-pages.yml | .github/workflows/close-issues.yml | .github/workflows/close-prs.yml | sqlc.yaml | sst.config.ts | sst-env.d.ts | tsconfig.json | turbo.json | screenshot-uk.png)
       return 0
       ;;
   esac

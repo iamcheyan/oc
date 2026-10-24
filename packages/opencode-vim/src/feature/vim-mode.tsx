@@ -892,7 +892,7 @@ export function useVimSession(
   directory: Accessor<string>,
   menu: Accessor<LeaderGroup[]>,
 ) {
-  const { isNormal, enterInsert, isLeaderActive, setLeaderActive, leaderGroup, setLeaderGroup, leaderSelectedIndex, setLeaderSelectedIndex } = useVimMode()
+  const { isNormal, enterNormal, enterInsert, isLeaderActive, setLeaderActive, leaderGroup, setLeaderGroup, leaderSelectedIndex, setLeaderSelectedIndex } = useVimMode()
   const renderer = useRenderer()
   const keymap = Keymap.use()
   const local = useLocal()
@@ -1181,6 +1181,24 @@ export function useVimSession(
 
   const isVimEnabled = createMemo(() => isNormal() && dialog.stack.length === 0)
 
+  Keymap.createLayer(() => ({
+    mode: "global",
+    priority: 100,
+    commands: [
+      {
+        id: "vim.session.enter.normal",
+        bind: "escape,ctrl+[",
+        title: "Enter Normal Mode",
+        group: "Vim",
+        enabled: () => !isNormal() && dialog.stack.length === 0,
+        run: () => {
+          enterNormal()
+          promptRef()?.blur()
+        },
+      },
+    ],
+  }))
+
   useBindings(() => ({
     enabled: reactiveMatcherFromSignal(isVimEnabled),
     bindings: [
@@ -1349,6 +1367,16 @@ export function useVimSession(
         cmd: () => focusPrompt(),
       },
       {
+        key: "a",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "shift+a",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
         key: "o",
         when: () => isVimNormalActive() && !isLeaderActive(),
         cmd: () => focusPrompt(),
@@ -1420,7 +1448,7 @@ export function useVimHome(
   directory: Accessor<string>,
   menu: Accessor<LeaderGroup[]>,
 ) {
-  const { isNormal, enterInsert, isLeaderActive, setLeaderActive, leaderGroup, setLeaderGroup, leaderSelectedIndex, setLeaderSelectedIndex } = useVimMode()
+  const { isNormal, enterNormal, enterInsert, isLeaderActive, setLeaderActive, leaderGroup, setLeaderGroup, leaderSelectedIndex, setLeaderSelectedIndex } = useVimMode()
   const renderer = useRenderer()
   const keymap = Keymap.use()
   const local = useLocal()
@@ -1651,6 +1679,24 @@ export function useVimHome(
 
   const isVimEnabled = createMemo(() => isNormal() && dialog.stack.length === 0)
 
+  Keymap.createLayer(() => ({
+    mode: "global",
+    priority: 100,
+    commands: [
+      {
+        id: "vim.home.enter.normal",
+        bind: "escape,ctrl+[",
+        title: "Enter Normal Mode",
+        group: "Vim",
+        enabled: () => !isNormal() && dialog.stack.length === 0,
+        run: () => {
+          enterNormal()
+          promptRef()?.blur()
+        },
+      },
+    ],
+  }))
+
   useBindings(() => ({
     enabled: reactiveMatcherFromSignal(isVimEnabled),
     bindings: [
@@ -1728,6 +1774,16 @@ export function useVimHome(
       },
       {
         key: "shift+i",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "a",
+        when: () => isVimNormalActive() && !isLeaderActive(),
+        cmd: () => focusPrompt(),
+      },
+      {
+        key: "shift+a",
         when: () => isVimNormalActive() && !isLeaderActive(),
         cmd: () => focusPrompt(),
       },

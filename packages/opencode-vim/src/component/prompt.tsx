@@ -640,12 +640,6 @@ export function Prompt(props: PromptProps) {
         mode: store.mode,
         autocompleteVisible: !!auto()?.visible,
       }),
-      capture:
-        store.mode === "normal"
-          ? auto()?.visible
-            ? ["escape", "navigate", "submit", "tab"]
-            : ["escape", "tab"]
-          : undefined,
     }
   })
 
@@ -769,6 +763,34 @@ export function Prompt(props: PromptProps) {
   )
 
   Keymap.createLayer(() => ({ mode: "global", commands: stashCommands() }))
+
+  Keymap.createLayer(() => {
+    return {
+      priority: 10,
+      target: inputTarget,
+      enabled: inputTarget() !== undefined && !vimMode.isNormal(),
+      commands: [
+        {
+          id: "vim.normal.escape",
+          bind: "escape",
+          title: "Enter Normal Mode",
+          group: "Vim",
+          run: () => {
+            enterVimNormalFromEscape()
+          },
+        },
+        {
+          id: "vim.normal.ctrl_bracket",
+          bind: "ctrl+[",
+          title: "Enter Normal Mode",
+          group: "Vim",
+          run: () => {
+            enterVimNormalFromEscape()
+          },
+        },
+      ],
+    }
+  })
 
   Keymap.createLayer(() => {
     return {
@@ -919,8 +941,8 @@ export function Prompt(props: PromptProps) {
     auto()?.hide()
     vimMode.enterNormal()
     setStore("mode", "normal")
+    input?.blur()
     inputTarget()?.blur()
-    return true
   }
 
   let submitting = false
@@ -1225,11 +1247,9 @@ export function Prompt(props: PromptProps) {
             <Show when={!props.compact}>
               <box flexDirection="row" flexShrink={0} paddingTop={props.compact ? 0 : 1} gap={1} justifyContent="space-between">
                 <box flexDirection="row" gap={1}>
-                  <Show when={props.compact}>
-                    <text fg={theme.text.muted}>
-                      {vimMode.isNormal() ? "NORMAL" : "INSERT"}
-                    </text>
-                  </Show>
+                  <text fg={theme.text.muted}>
+                    {vimMode.isNormal() ? "NORMAL" : "INSERT"}
+                  </text>
                   <Show when={local.agent.current()} fallback={<box height={1} />}>
                     {(agent) => (
                       <>
@@ -1392,7 +1412,7 @@ export function Prompt(props: PromptProps) {
               }}
               onCursorChange={() => setCursorVersion((value) => value + 1)}
               onKeyDown={(e: KeyEvent) => {
-                if (e.name === "escape" && !props.disabled && !vimMode.isNormal()) {
+                if ((e.name === "escape" || (e.ctrl && e.name === "[")) && !vimMode.isNormal()) {
                   enterVimNormalFromEscape(e)
                   return
                 }
