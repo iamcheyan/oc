@@ -1,78 +1,67 @@
 # opencode-vim
 
-A LazyVim-inspired Vim TUI frontend for [opencode](https://github.com/anomalyco/opencode) — an open-source AI-powered development tool.
+A Vim-oriented TUI maintained as a downstream fork of
+[OpenCode](https://github.com/anomalyco/opencode).
 
-This fork maintains a Vim-first minimal TUI (`packages/opencode-vim/`) on top of OpenCode 2 (`upstream/dev`), keeping upstream changes confined to a single seam file (`packages/tui/src/app.tsx`) for low-conflict syncing.
+This repository keeps the complete upstream project and adds a keyboard-first
+frontend under `packages/opencode-vim/`. Most fork code lives in separate
+packages; only two explicitly marked integration points modify upstream source.
 
 ![opencode-vim screenshot](static/screenshot.jpeg)
 
 ## Fork Features
 
-- **Vim Modes** — Insert (`i`/`a`) and Normal (`<Esc>`) mode workflow for keyboard-first navigation
-- **Leader Menu** — Right-side popup shortcut menu (`<Space>` in Normal mode) inspired by LazyVim
-- **Minimal Root Takeover** — Replaces `Home` and `Session` routes with compact `MinimalHome` and `MinimalSession` views while suppressing upstream chrome (`SessionTabs`, `DevToolsBar`, `DialogHighlights`)
-- **Compact Interface** — Streamlined layout with model info, token usage, Vim mode indicator, and inline spinner
-- **Slash & File Autocomplete** — Bottom-anchored `/` and `@` autocomplete popup driven by OpenCode 2's `Keymap.createLayer`
-- **Single-Seam Upstream Integration** — Only `packages/tui/src/app.tsx` has a `FORK-SEAM (opencode-vim)` block; all other fork logic lives in `packages/opencode-vim/`
+- Vim insert and normal modes
+- LazyVim-inspired leader menu
+- Compact prompt, status, token usage, and progress UI
+- Fork-owned autocomplete and session presentation
+- Standalone `opencode-vim` binary
 
-## Building
+## Relationship To Upstream
+
+- `upstream/dev` is the canonical OpenCode development branch.
+- `origin/main` is this fork's published branch.
+- Fork commits form a small patch queue on top of `upstream/dev`.
+- `fork/update.sh` rebases that queue whenever upstream advances.
+- `fork/check-upstream-seams.sh` rejects accidental changes outside fork-owned
+  paths and the two allowlisted upstream files.
+
+Rebase here does not copy files over a fresh upstream checkout. Git first moves
+the branch to the latest upstream commit, then reapplies each fork commit in
+order. A conflict stops the process for manual review.
+
+See
+[`fork/docs/202606152140_rebase-maintenance-model.md`](docs/202606152140_rebase-maintenance-model.md)
+for the full maintenance model.
+
+## Build
 
 ```bash
 bash fork/build.sh
 ```
 
-Builds the Vim plugin bundle (`fork/dist/plugin/`) and standalone binaries in `fork/dist/opencode-<os>-<arch>/bin/`:
-- `opencode`
-- `opencode-vim`
+The local build is written under `fork/dist/`.
 
-## Running
+## Test
 
 ```bash
-./fork/dist/opencode-linux-x64/bin/opencode-vim [project]
+cd packages/opencode-vim
+bun test
+bun run typecheck
 ```
 
-Or in development:
+## Sync With Upstream
 
-```bash
-bun run --cwd packages/cli src/index.ts [project]
-```
-
-## Validation & Testing
-
-```bash
-# 1. Verify upstream seam boundaries (only packages/tui/src/app.tsx allowed)
-bash fork/check-upstream-seams.sh
-
-# 2. Run opencode-vim unit tests and typecheck
-cd packages/opencode-vim && bun test && bun run typecheck
-
-# 3. Run TUI typecheck
-cd packages/tui && bun run typecheck
-
-# 4. Verify plugin load and build binaries
-bash fork/build.sh
-```
-
-## Syncing with Upstream
+Start from a clean worktree:
 
 ```bash
 bash fork/update.sh
 ```
 
-Fetches `upstream/dev`, rebases the fork branch onto `upstream/dev`, resolves `bun.lock` automatically via `bun install`, and leaves any seam conflicts ready for inspection. See [`fork/AGENTS.md`](./AGENTS.md) and [`fork/docs/202610240935_opencode-v2-vim-migration-and-maintenance-guide.md`](./docs/202610240935_opencode-v2-vim-migration-and-maintenance-guide.md) for the complete developer and sync workflow.
-
-## Monorepo Package Overview (OpenCode 2)
-
-| Package | Description |
-|---------|-------------|
-| `packages/cli` | CLI binary entrypoint (`@opencode/cli`) |
-| `packages/tui` | Upstream OpenTUI + SolidJS terminal UI (`@opencode/tui`) |
-| `packages/opencode` | Core runtime & server (`opencode`) |
-| `packages/core` | Shared Effect services, domain types, and session core |
-| `packages/app` | Web frontend (SolidJS) |
-| `packages/desktop` | Desktop app |
-| `packages/opencode-vim` | **Fork — Minimal Vim TUI frontend & plugin (`opencode-vim`)** |
+The script fetches both remotes, creates a remote safety branch, rebases onto
+`upstream/dev`, validates and builds the fork, then updates `origin/main` with
+`--force-with-lease`.
 
 ## License
 
-Same as upstream [opencode](https://github.com/anomalyco/opencode) — MIT.
+This downstream project follows the upstream OpenCode MIT license.
