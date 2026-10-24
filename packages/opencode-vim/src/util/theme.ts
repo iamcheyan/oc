@@ -12,9 +12,7 @@ export function useForkTheme() {
     get theme() {
       return theme()
     },
-    get syntax() {
-      return themes.currentSyntax()
-    },
+    syntax: themes.currentSyntax,
   }
 }
 
@@ -30,7 +28,7 @@ export function MinimalRendererBackground() {
 
 export function selectedForeground(theme: { text: { base: RGBA; muted: RGBA } }, background: RGBA = RGBA.fromInts(0, 0, 0)) {
   const luminance = (color: RGBA) => 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b
-  return luminance(background) > 0.5 ? theme.text.base : theme.text.muted
+  return luminance(background) > 0.4 ? RGBA.fromInts(0, 0, 0) : RGBA.fromInts(255, 255, 255)
 }
 
 export { tint } from "../../../tui/src/theme/color"

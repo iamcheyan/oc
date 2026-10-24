@@ -327,7 +327,7 @@ export function SimpleTool(props: SimpleToolProps) {
           <box paddingLeft={2}>
             <code
               filetype={ft()}
-              syntaxStyle={syntax}
+              syntaxStyle={syntax()}
               content={stringValue(input().content) ?? output()}
               fg={theme.text.muted}
               drawUnstyledText={false}
@@ -352,7 +352,7 @@ export function SimpleTool(props: SimpleToolProps) {
             diff={metadata().diff}
             view={view()}
             filetype={ft()}
-            syntaxStyle={syntax}
+            syntaxStyle={syntax()}
             showLineNumbers={true}
             width="100%"
             wrapMode={ctx.diffWrapMode()}
@@ -488,7 +488,7 @@ export function SimpleTool(props: SimpleToolProps) {
                     diff={file.diff}
                     view={view()}
                     filetype={filetype(file.path)}
-                    syntaxStyle={syntax}
+                    syntaxStyle={syntax()}
                     showLineNumbers={true}
                     width="100%"
                     wrapMode={ctx.diffWrapMode()}

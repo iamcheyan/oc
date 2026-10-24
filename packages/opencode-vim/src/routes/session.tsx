@@ -22,6 +22,8 @@ import { DialogFork } from "../../../tui/src/routes/session/dialog-fork"
 import { DialogTimeline } from "../../../tui/src/routes/session/dialog-timeline"
 import { errorMessage } from "../../../tui/src/util/error"
 import { SessionContext } from "../context/session-context"
+import { context as RenderContext } from "../../../tui/src/routes/session/render-context"
+import { createTimelineAnchors } from "../../../tui/src/routes/session/anchors"
 import { MinimalRendererBackground } from "../util/theme"
 import { MinimalSessionPromptFooter, MinimalStatusBar } from "../component/minimal-layout"
 import { type MinimalPromptRef, type PromptRef } from "../component/prompt"
@@ -167,6 +169,26 @@ export function MinimalSession(props: { sessionID?: string; verticalTabsWidth?: 
     config,
   }
 
+  const anchors = createTimelineAnchors()
+  const renderContextValue = {
+    get width() { return dimensions().width - 4 },
+    get terminal() { return dimensions() },
+    get sessionID() { return sessionID() },
+    anchors,
+    groupExpanded: () => true,
+    setGroupExpanded: () => {},
+    thinkingMode: () => showThinking() ? "show" as const : "hide" as const,
+    markdownMode: () => "rendered" as const,
+    groupExploration: () => false,
+    diffWrapMode: () => config.data.diffs?.wrap ?? "word",
+    models: () => data.location.model.list(session()?.location ?? location.ref) ?? [],
+    messageIndex: () => undefined,
+    legacyTurns: () => false,
+    get config() { return config.data },
+    mutatePending: async () => false,
+    pendingDelivery: () => undefined,
+  }
+
   Keymap.createLayer(() => ({ mode: "global", commands: [
     { id: "session.toggle.thinking", title: "Toggle thinking", group: "Session", run: () => { setShowThinking((value) => !value); dialog.clear() } },
     { id: "session.sidebar.toggle", title: "Toggle sidebar", group: "Session", run: () => { setSidebar((value) => !value); dialog.clear() } },
@@ -193,18 +215,20 @@ export function MinimalSession(props: { sessionID?: string; verticalTabsWidth?: 
 
   return <AutocompleteHostProvider><MinimalRendererBackground /><ModelFreeGuard /><ForkModelCommand />
     <SessionContext.Provider value={context}>
-      <box flexDirection="column" flexGrow={1} minHeight={0} position="relative">
-        <MinimalStatusBar sessionID={sessionID()} pureMode={pureMode()} />
-        <box flexGrow={1} minHeight={0}><scrollbox ref={(value) => { scroll = value }} flexGrow={1} minHeight={0} stickyScroll stickyStart="bottom">
-          <For each={messages()}>{(message) => <MessageView message={message} showThinking={showThinking()} hideTools={hideTools()} pureMode={pureMode()} />}</For>
-          <Show when={status() !== "idle"}><text fg={theme.text.muted}>● {status()}</text></Show>
-        </scrollbox></box>
-        <Show when={permissions().length > 0}>{permissions()[0] && <PermissionPrompt request={permissions()[0]!} directory={session()?.location.directory} />}</Show>
-        <Show when={permissions().length === 0 && forms().length > 0}>{forms()[0] && <FormPrompt form={forms()[0]!} />}</Show>
-        <Show when={session()?.parentID}><text fg={theme.text.muted}>Subagent session · {session()?.parentID}</text></Show>
-        <Show when={visible()}><MinimalSessionPromptFooter bind={bind} sessionID={sessionID()} visible={visible()} disabled={disabled()} onSubmit={toBottom} menu={menu()} /></Show>
-        <Show when={sidebar()}><box position="absolute" top={2} right={0} width={42} backgroundColor={theme.background.raised.base} zIndex={10}><Sidebar sessionID={sessionID()} compact bare hideFooter /></box></Show>
-      </box>
+      <RenderContext.Provider value={renderContextValue}>
+        <box flexDirection="column" flexGrow={1} minHeight={0} position="relative">
+          <MinimalStatusBar sessionID={sessionID()} pureMode={pureMode()} />
+          <box flexGrow={1} minHeight={0}><scrollbox ref={(value) => { scroll = value }} flexGrow={1} minHeight={0} stickyScroll stickyStart="bottom">
+            <For each={messages()}>{(message) => <MessageView message={message} showThinking={showThinking()} hideTools={hideTools()} pureMode={pureMode()} />}</For>
+            <Show when={status() !== "idle"}><text fg={theme.text.muted}>● {status()}</text></Show>
+          </scrollbox></box>
+          <Show when={permissions().length > 0}>{permissions()[0] && <PermissionPrompt request={permissions()[0]!} directory={session()?.location.directory} />}</Show>
+          <Show when={permissions().length === 0 && forms().length > 0}>{forms()[0] && <FormPrompt form={forms()[0]!} />}</Show>
+          <Show when={session()?.parentID}><text fg={theme.text.muted}>Subagent session · {session()?.parentID}</text></Show>
+          <Show when={visible()}><MinimalSessionPromptFooter bind={bind} sessionID={sessionID()} visible={visible()} disabled={disabled()} onSubmit={toBottom} menu={menu()} /></Show>
+          <Show when={sidebar()}><box position="absolute" top={2} right={0} width={42} backgroundColor={theme.background.raised.base} zIndex={10}><Sidebar sessionID={sessionID()} compact bare hideFooter /></box></Show>
+        </box>
+      </RenderContext.Provider>
     </SessionContext.Provider>
   </AutocompleteHostProvider>
 }
@@ -218,7 +242,9 @@ function MessageView(props: { message: SessionMessageInfo; showThinking: boolean
     <Match when={message().type === "system"}>{message().type === "system" ? <text fg={theme.text.muted}>{(message() as Extract<SessionMessageInfo, { type: "system" }>).description ?? "Instructions updated"}</text> : null}</Match>
     <Match when={message().type === "synthetic"}>{message().type === "synthetic" ? <text fg={theme.text.muted}>{(message() as Extract<SessionMessageInfo, { type: "synthetic" }>).description ?? (message() as Extract<SessionMessageInfo, { type: "synthetic" }>).text}</text> : null}</Match>
     <Match when={message().type === "compaction"}><text fg={theme.text.muted}>— Compacted —</text></Match>
-    <Match when={message().type === "idle"}><text fg={theme.text.feedback.error.base}>Session idle</text></Match>
+    <Match when={message().type === "idle" ? (message() as Extract<SessionMessageInfo, { type: "idle" }>).error : undefined}>
+      {(error) => <box paddingLeft={1}><text fg={theme.text.feedback.error.base}>Error: {errorMessage(error())}</text></box>}
+    </Match>
     <Match when={message().type === "shell"}>{message().type === "shell" ? <text fg={theme.text.muted}>$ {(message() as Extract<SessionMessageInfo, { type: "shell" }>).command}</text> : null}</Match>
     <Match when={message().type === "skill"}>{message().type === "skill" ? <text fg={theme.text.muted}>skill · {(message() as Extract<SessionMessageInfo, { type: "skill" }>).name}</text> : null}</Match>
     <Match when={message().type === "agent-switched" || message().type === "model-switched" || message().type === "location-switched"}>
@@ -241,6 +267,11 @@ function AssistantMessageView(props: { message: SessionMessageAssistant; showThi
   const theme = useTheme()
   const local = useLocal()
   return <box>
+    <Show when={props.message.error}>
+      <box paddingLeft={1} marginTop={1}>
+        <text fg={theme.text.feedback.error.base}>Error: {errorMessage(props.message.error)}</text>
+      </box>
+    </Show>
     <For each={props.message.content}>{(part) => <AssistantPart part={part} message={props.message} showThinking={props.showThinking} hideTools={props.hideTools} />}</For>
     <Show when={!props.pureMode}>
       <text fg={theme.text.muted}>{local.agent.current()?.name ?? props.message.agent} · {props.message.model.providerID}/{props.message.model.id}<Show when={props.message.time.completed}> · {props.message.finish}</Show></text>

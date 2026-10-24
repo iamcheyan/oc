@@ -318,9 +318,9 @@ export function Prompt(props: PromptProps) {
     editor.clearSelection()
   }
   const { theme, syntax } = useForkTheme()
-  const fileStyleId = syntax.getStyleId("extmark.file")!
-  const agentStyleId = syntax.getStyleId("extmark.agent")!
-  const pasteStyleId = syntax.getStyleId("extmark.paste")!
+  const fileStyleId = () => syntax().getStyleId("extmark.file")!
+  const agentStyleId = () => syntax().getStyleId("extmark.agent")!
+  const pasteStyleId = () => syntax().getStyleId("extmark.paste")!
   let promptPartTypeId = 0
   const event = useEvent()
 
@@ -605,9 +605,9 @@ export function Prompt(props: PromptProps) {
         setStore("extmarkToPartIndex", (map: Map<number, PromptPartRef>) => new Map(map).set(extmarkId, part))
       },
       value: store.prompt.text,
-      fileStyleId,
-      agentStyleId,
-      skillStyleId: syntax.getStyleId("extmark.skill")!,
+      fileStyleId: fileStyleId(),
+      agentStyleId: agentStyleId(),
+      skillStyleId: syntax().getStyleId("extmark.skill")!,
       hasSkill: (id: string) => store.prompt.skills?.some((skill) => skill.id === id) ?? false,
       promptPartTypeId: () => promptPartTypeId,
     }
@@ -648,9 +648,9 @@ export function Prompt(props: PromptProps) {
     setStore("extmarkToPartIndex", new Map())
 
     const parts = [
-      ...(prompt.files ?? []).map((part, index) => ({ mention: part.mention, ref: { type: "file" as const, index }, styleId: fileStyleId })),
-      ...(prompt.agents ?? []).map((part, index) => ({ mention: part.mention, ref: { type: "agent" as const, index }, styleId: agentStyleId })),
-      ...prompt.pasted.map((part, index) => ({ mention: part.source, ref: { type: "pasted" as const, index }, styleId: pasteStyleId })),
+      ...(prompt.files ?? []).map((part, index) => ({ mention: part.mention, ref: { type: "file" as const, index }, styleId: fileStyleId() })),
+      ...(prompt.agents ?? []).map((part, index) => ({ mention: part.mention, ref: { type: "agent" as const, index }, styleId: agentStyleId() })),
+      ...prompt.pasted.map((part, index) => ({ mention: part.source, ref: { type: "pasted" as const, index }, styleId: pasteStyleId() })),
     ]
     parts.forEach(({ mention, ref, styleId }) => {
       if (!mention?.text) return
@@ -1068,7 +1068,7 @@ export function Prompt(props: PromptProps) {
       start: extmarkStart,
       end: extmarkEnd,
       virtual: true,
-      styleId: pasteStyleId,
+      styleId: pasteStyleId(),
       typeId: promptPartTypeId,
     })
 
@@ -1155,7 +1155,7 @@ export function Prompt(props: PromptProps) {
       start: extmarkStart,
       end: extmarkEnd,
       virtual: true,
-      styleId: pasteStyleId,
+      styleId: pasteStyleId(),
       typeId: promptPartTypeId,
     })
 
@@ -1477,7 +1477,7 @@ export function Prompt(props: PromptProps) {
                 r.target?.focus()
               }}
               cursorColor={props.disabled ? theme.background.raised.base : theme.text.base}
-              syntaxStyle={syntax}
+              syntaxStyle={syntax()}
             />
             </box>
           </box>
