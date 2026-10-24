@@ -43,8 +43,6 @@ import type { KeymapCommand } from "../../../tui/src/context/keymap"
 import { useVimMode } from "../feature/vim-mode"
 import { getLeaderMenu, isSeparator, type LeaderGroup, type LeaderLeaf, type LeaderSeparator } from "../feature/leader-menu"
 import { loadVimConfig } from "../config/vim"
-import { loadQuickModelConfig, formatSlotModel, quickModelVersion } from "../config/quick-model"
-import { isForcedFreeOnly, isModelFree } from "../config/model-filter"
 
 export type PromptProps = {
   sessionID?: string
@@ -131,25 +129,6 @@ export function Prompt(props: PromptProps) {
   const vimHidePrompt = createMemo(() => vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => vimConfig().autoResume ?? false)
   const leaderMenu = createMemo(() => props.menu ?? getLeaderMenu(paths.cwd))
-  const quickModelSlots = createMemo(() => {
-    // Read version so this memo re-runs after the config is saved from the dialog.
-    quickModelVersion()
-    const cfg = loadQuickModelConfig(location.current?.directory ?? paths.cwd)
-    return ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => {
-      const model = cfg.slots[k]
-      const idx = model?.indexOf("/") ?? -1
-      const models = data.location.model.list(location.ref) ?? []
-      const visible =
-        model &&
-        idx !== -1 &&
-        (!isForcedFreeOnly() ||
-          isModelFree(models, { providerID: model.slice(0, idx), modelID: model.slice(idx + 1) }))
-      return {
-        key: k,
-        model: visible ? formatSlotModel(model) : "",
-      }
-    })
-  })
   const isLeaderActive = createMemo(() => {
     if (!vimMode.isNormal()) return false
     return vimMode.isLeaderActive?.() || false
@@ -1310,40 +1289,6 @@ export function Prompt(props: PromptProps) {
                 paddingBottom={1}
                 paddingLeft={2}
               >
-                <Show when={!leaderActiveGroup()}>
-                  <box flexDirection="column" marginRight={2} minWidth={24}>
-                    <text fg={RGBA.fromInts(255, 255, 255, 255)} attributes={TextAttributes.BOLD} marginBottom={1}>
-                      QUICK
-                    </text>
-                    <For each={quickModelSlots()}>
-                      {(slot) => (
-                        <box flexDirection="row" gap={1} width="100%">
-                          <text fg={theme.text.feedback.warning.base} attributes={TextAttributes.BOLD}>
-                            {slot.key}
-                          </text>
-                          <text fg={theme.text.muted}>→</text>
-                          <text
-                            fg={slot.model ? theme.text.base : theme.text.muted}
-                            wrapMode="none"
-                            truncate
-                          >
-                            {slot.model || "(empty)"}
-                          </text>
-                        </box>
-                      )}
-                    </For>
-                    <box flexDirection="row" gap={1} width="100%" marginTop={1}>
-                      <text fg={RGBA.fromInts(100, 200, 255, 255)} attributes={TextAttributes.BOLD}>
-                        0
-                      </text>
-                      <text fg={theme.text.muted}>→</text>
-                      <text fg={RGBA.fromInts(100, 200, 255, 255)} wrapMode="none">
-                        ⚙ settings
-                      </text>
-                    </box>
-                  </box>
-                  <box flexDirection="column" border={["left"]} borderColor={theme.text.muted} marginRight={2} />
-                </Show>
                 <box flexDirection="column" width={leaderMenuWidth()}>
                   <box flexDirection="row" justifyContent="space-between" marginBottom={1}>
                     <text fg={RGBA.fromInts(255, 255, 255, 255)} attributes={TextAttributes.BOLD}>

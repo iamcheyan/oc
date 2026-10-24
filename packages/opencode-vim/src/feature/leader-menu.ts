@@ -93,7 +93,6 @@ export const DEFAULT_LEADER_MENU: LeaderGroup[] = [
       { key: "v", label: "variants", icon: "\u{f0453}", action: "command", command: "variant.list" },
       { key: "—", label: "", separator: true },
       { key: "c", label: "connect provider", icon: "\u{f0279}", action: "command", command: "provider.connect" },
-      { key: "t", label: "test api", icon: "\u{f0132}", action: "api_test" },
     ],
   },
   {
@@ -177,9 +176,6 @@ export const DEFAULT_LEADER_MENU: LeaderGroup[] = [
       { key: "s", label: "status", icon: "\u{f0208}", action: "command", command: "opencode.status" },
       { key: "h", label: "help", icon: "\u{f02d6}", action: "command", command: "help.show" },
       { key: "d", label: "open docs", icon: "\u{f0219}", action: "command", command: "docs.open" },
-      { key: "—", label: "", separator: true },
-      { key: "b", label: "backup config", icon: "\u{f006f}", action: "backup" },
-      { key: "e", label: "restore config", icon: "\u{f006f}", action: "restore" },
     ],
   },
   {

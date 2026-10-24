@@ -14,10 +14,8 @@
     "@opentui/solid": "catalog:",
     "@opencode/client": "workspace:*",
     "@opencode/plugin": "workspace:*",
-    "@opencode-ai/api-test": "workspace:*",
     "@opencode/tui": "workspace:*",
     "@opencode/schema": "workspace:*",
-    "bedrock-scanner": "workspace:*",
     "fuzzysort": "catalog:",
     "remeda": "catalog:",
     "solid-js": "catalog:"

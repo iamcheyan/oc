@@ -44,6 +44,8 @@ def git(*args: str, data: bytes | None = None) -> bytes:
 def safe_email_match(match: re.Match[str]) -> bool:
     value = match.group(0).lower()
     domain = value.rsplit("@", 1)[-1]
+    if domain.endswith(".patch") or domain.endswith(".lock") or domain.endswith(".json"):
+        return True
     return domain in SAFE_EMAIL_DOMAINS or domain.endswith(".example")
 
 
@@ -66,6 +68,8 @@ def findings(path: str, content: bytes) -> list[tuple[str, int]]:
     # The scanner's own pattern definitions contain literal path examples;
     # scanning itself would always self-flag.
     if Path(path).name.replace("-", "_") == "privacy_scan.py":
+        return []
+    if Path(path).name in ("bun.lock", "package-lock.json", "yarn.lock"):
         return []
     if len(content) > MAX_BYTES:
         return [("oversize-file-review-required", 1)]

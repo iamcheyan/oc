@@ -23,8 +23,6 @@ This repository is a downstream fork of [OpenCode](https://github.com/anomalyco/
 ```
 packages/
 ├── opencode-vim/       ← [FORK-OWNED] Full Vim TUI frontend, modes, leader menu, config
-├── miniapps/          ← [FORK-OWNED] Auxiliary mini-tools (api-test, etc.)
-├── bedrock-scanner/   ← [FORK-OWNED] AWS Bedrock model scanner
 ├── tui/               ← [UPSTREAM-OWNED] ONLY packages/tui/src/app.tsx is allowlisted
 └── (all other packages) ← [UPSTREAM-OWNED] Protected upstream code (do not modify)
 fork/                  ← [FORK-OWNED] Build, sync, seam check, and maintenance docs
