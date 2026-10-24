@@ -25,7 +25,12 @@ detect_platform() {
 
 OPENCODE_BIN() {
   detect_platform
-  echo "$ROOT_DIR/fork/dist/opencode-${PLATFORM_OS}-${PLATFORM_ARCH}/bin/opencode"
+  local oc_vim="$ROOT_DIR/fork/dist/oc-vim-${PLATFORM_OS}-${PLATFORM_ARCH}/bin/oc-vim"
+  if [ -x "$oc_vim" ]; then
+    echo "$oc_vim"
+  else
+    echo "$ROOT_DIR/fork/dist/opencode-${PLATFORM_OS}-${PLATFORM_ARCH}/bin/opencode"
+  fi
 }
 
 # 从 config.jsonc 中发现免费模型，随机选一个

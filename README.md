@@ -1,21 +1,19 @@
-# opencode-vim
+# oc-vim
 
-A Vim-oriented TUI maintained as a downstream fork of
+A Vim-oriented keyboard-first TUI maintained as a downstream fork of
 [OpenCode](https://github.com/anomalyco/opencode).
 
-This repository keeps the complete upstream project and adds a keyboard-first
-frontend under `packages/opencode-vim/`. Most fork code lives in separate
-packages; only two explicitly marked integration points modify upstream source.
+This repository keeps the complete upstream project and adds a lightweight,
+keyboard-first Vim frontend under `packages/opencode-vim/`.
 
-![opencode-vim screenshot](fork/static/screenshot.jpeg)
+![oc-vim screenshot](fork/static/screenshot.jpeg)
 
 ## Fork Features
 
-- Vim insert and normal modes
-- LazyVim-inspired leader menu
-- Compact prompt, status, token usage, and progress UI
-- Fork-owned autocomplete and session presentation
-- Standalone `opencode-vim` binary
+- Vim insert and normal modes (`Esc`, `i`, `v`)
+- Native LazyVim-style leader menu (`Space`)
+- Compact prompt, minimal status bar, and clean session UI
+- Standalone `oc-vim` binary (with `oc` / `opencode-vim` aliases)
 
 ## Relationship To Upstream
 

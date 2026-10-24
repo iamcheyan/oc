@@ -1,6 +1,6 @@
-# AGENTS.md (OpenCode Vim Fork)
+# AGENTS.md (oc-vim Fork)
 
-This repository is a downstream fork of [OpenCode](https://github.com/anomalyco/opencode) maintaining a keyboard-first, lightweight Vim TUI frontend in `packages/opencode-vim/`.
+This repository is a downstream fork of [OpenCode](https://github.com/anomalyco/opencode) maintaining a keyboard-first, lightweight Vim TUI frontend in `packages/opencode-vim/` (project name: `oc-vim`).
 
 > [!IMPORTANT]
 > **Instructions for Autonomous Maintenance Agents**  
@@ -166,9 +166,9 @@ GitHub Actions (`.github/workflows/fork-build.yml`) will automatically compile L
 
 ### Step 6: Standard Task Output Format
 - **On Success**: Output a concise single-line summary:
-  `oc 同步成功：<N> 个上游 commits 已并入 main，Release 自动构建中`
+  `oc-vim 同步成功：<N> 个上游 commits 已并入 main，Release 自动构建中`
 - **On Failure**: Detail the exact error:
-  `oc 同步失败：卡在步骤 <步骤名>，冲突文件: <文件列表>，rebase 已安全回滚`
+  `oc-vim 同步失败：卡在步骤 <步骤名>，冲突文件: <文件列表>，rebase 已安全回滚`
 
 ---
 

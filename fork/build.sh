@@ -112,7 +112,7 @@ main() {
     rm -rf "$SCRIPT_DIR/dist" "$CLI_DIR/dist"
   fi
 
-  echo -e "${BOLD}${CYAN}Building opencode + opencode-vim binaries${RESET}"
+  echo -e "${BOLD}${CYAN}Building oc-vim binaries${RESET}"
   echo ""
 
   load_bun
@@ -144,28 +144,37 @@ main() {
     bun run script/build.ts --single --skip-install --skip-web-ui
   )
 
-  local package_dir="opencode-${PLATFORM_OS}-${PLATFORM_ARCH}"
+  local package_dir="oc-vim-${PLATFORM_OS}-${PLATFORM_ARCH}"
   local out_dir="$SCRIPT_DIR/dist/$package_dir"
-  local out_original_bin="$out_dir/bin/opencode"
-  local out_vim_bin="$out_dir/bin/opencode-vim"
-  rm -rf "$out_dir"
-  mkdir -p "$out_dir/bin"
+  local legacy_dir="$SCRIPT_DIR/dist/opencode-${PLATFORM_OS}-${PLATFORM_ARCH}"
+  local out_main_bin="$out_dir/bin/oc-vim"
+  rm -rf "$out_dir" "$legacy_dir"
+  mkdir -p "$out_dir/bin" "$legacy_dir/bin"
 
   local cli_bin=""
   for cli_dir in "$CLI_DIR"/dist/cli-*; do
     [ -d "$cli_dir/bin" ] || continue
     if [ -f "$cli_dir/bin/opencode" ]; then
       cli_bin="$cli_dir/bin/opencode"
-      cp -f "$cli_bin" "$out_original_bin"
-      cp -f "$cli_bin" "$out_vim_bin"
-      chmod 755 "$out_original_bin" "$out_vim_bin"
+      cp -f "$cli_bin" "$out_main_bin"
+      chmod 755 "$out_main_bin"
+      cp -f "$cli_bin" "$out_dir/bin/oc"
+      cp -f "$cli_bin" "$out_dir/bin/opencode-vim"
+      cp -f "$cli_bin" "$out_dir/bin/opencode"
+      cp -f "$cli_bin" "$legacy_dir/bin/opencode"
+      cp -f "$cli_bin" "$legacy_dir/bin/opencode-vim"
+      chmod 755 "$out_dir/bin/"* "$legacy_dir/bin/"*
       break
     elif [ -f "$cli_dir/bin/opencode.exe" ]; then
       cli_bin="$cli_dir/bin/opencode.exe"
-      out_original_bin="$out_dir/bin/opencode.exe"
-      out_vim_bin="$out_dir/bin/opencode-vim.exe"
-      cp -f "$cli_bin" "$out_original_bin"
-      cp -f "$cli_bin" "$out_vim_bin"
+      out_main_bin="$out_dir/bin/oc-vim.exe"
+      cp -f "$cli_bin" "$out_main_bin"
+      cp -f "$cli_bin" "$out_dir/bin/oc.exe"
+      cp -f "$cli_bin" "$out_dir/bin/opencode-vim.exe"
+      cp -f "$cli_bin" "$out_dir/bin/opencode.exe"
+      cp -f "$cli_bin" "$legacy_dir/bin/opencode.exe"
+      cp -f "$cli_bin" "$legacy_dir/bin/opencode-vim.exe"
+      chmod 755 "$out_dir/bin/"* "$legacy_dir/bin/"*
       break
     fi
   done
@@ -182,16 +191,16 @@ main() {
   "private": true
 }
 EOF
+  cp -f "$out_dir/package.json" "$legacy_dir/package.json"
 
   echo -e "${DIM}Running smoke test...${RESET}"
-  smoke_test_binary "$out_original_bin" "Original smoke test passed" "Warning: original smoke test failed"
-  smoke_test_binary "$out_vim_bin" "Vim TUI smoke test passed" "Warning: Vim TUI smoke test failed"
+  smoke_test_binary "$out_main_bin" "oc-vim smoke test passed" "Warning: oc-vim smoke test failed"
 
   echo ""
   echo -e "${GREEN}${BOLD}Build complete!${RESET}"
   echo ""
-  echo -e "  Original: ${CYAN}$out_original_bin${RESET}"
-  echo -e "  Vim TUI:  ${CYAN}$out_vim_bin${RESET}"
+  echo -e "  oc-vim:   ${CYAN}$out_main_bin${RESET}"
+  echo -e "  Aliases:  ${CYAN}$out_dir/bin/oc${RESET}, ${CYAN}$out_dir/bin/opencode-vim${RESET}"
   echo -e "  Plugin:   ${CYAN}$SCRIPT_DIR/dist/plugin/tui.js${RESET}"
 }
 
