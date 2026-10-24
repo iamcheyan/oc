@@ -974,6 +974,9 @@ export function Prompt(props: PromptProps) {
     if (sessionID == null) {
       const created = data.session.create({ agent: agent.id, location: location.ref ?? data.location.default(), model: { providerID: selectedModel.providerID, id: selectedModel.modelID, variant } })
       sessionID = created.id
+    } else {
+      const model = { providerID: selectedModel.providerID, id: selectedModel.modelID, variant }
+      void client.api.session.switchModel({ sessionID, model }).catch(() => {})
     }
 
     let inputText = store.prompt.text
