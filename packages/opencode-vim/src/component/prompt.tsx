@@ -10,43 +10,41 @@ import {
 } from "@opentui/core"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match, For } from "solid-js"
 import path from "path"
-import { useLocal } from "@tui/context/local"
-import { tint, useForkTheme } from "@/util/theme"
-import { EmptyBorder, SplitBorder } from "@tui/ui/border"
-import { useClient } from "@tui/context/client"
-import { useRoute } from "@tui/context/route"
-import { useEvent } from "@tui/context/event"
-import { editorSelectionKey, useEditorContext, type EditorSelection } from "@tui/context/editor"
+import { useLocal } from "../../../tui/src/context/local"
+import { tint, useForkTheme } from "../util/theme"
+import { EmptyBorder, SplitBorder } from "../../../tui/src/ui/border"
+import { useClient } from "../../../tui/src/context/client"
+import { useRoute } from "../../../tui/src/context/route"
+import { useEvent } from "../../../tui/src/context/event"
+import { editorSelectionKey, useEditorContext, type EditorSelection } from "../../../tui/src/context/editor"
 import { createStore, produce, unwrap } from "solid-js/store"
-import { usePromptHistory, type PromptInfo, type PromptPartRef } from "@tui/prompt/history"
-import { computePromptTraits } from "@tui/prompt/traits"
-import { expandPastedTextPlaceholders } from "@tui/prompt/part"
-import { usePromptStash } from "@tui/prompt/stash"
-import { DialogStash } from "@tui/component/dialog-stash"
+import { usePromptHistory, type PromptInfo, type PromptPartRef } from "../../../tui/src/prompt/history"
+import { computePromptTraits } from "../../../tui/src/prompt/traits"
+import { expandPastedTextPlaceholders } from "../../../tui/src/prompt/part"
+import { usePromptStash } from "../../../tui/src/prompt/stash"
+import { DialogStash } from "../../../tui/src/component/dialog-stash"
 import { type AutocompleteRef } from "./autocomplete"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
-import { openEditor } from "@tui/editor"
-import { Locale } from "@/util/locale"
-import { useDialog } from "@tui/ui/dialog"
-import { useToast } from "@tui/ui/toast"
-import { createFadeIn } from "@tui/util/signal"
-import { DialogSkill } from "@/component/dialog-skill"
-import { useArgs } from "@tui/context/args"
-import { useConfig } from "@tui/config"
-import { useClipboard } from "@tui/context/clipboard"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import { usePromptRef } from "@tui/context/prompt"
-import { Keymap } from "@tui/context/keymap"
-import { useTuiPaths } from "@tui/context/runtime"
-import { useAutocompleteHost } from "@/context/autocomplete-host"
-import type { KeymapCommand } from "@tui/context/keymap"
-import { useVimMode } from "@/feature/vim-mode"
-import { getLeaderMenu, isSeparator, type LeaderGroup, type LeaderLeaf, type LeaderSeparator } from "@/feature/leader-menu"
-import { loadVimConfig } from "@/config/vim"
-import { loadQuickModelConfig, formatSlotModel, quickModelVersion } from "@/config/quick-model"
-import { isForcedFreeOnly, isModelFree } from "@/config/model-filter"
-import { Skill } from "@opencode/schema"
+import { openEditor } from "../../../tui/src/editor"
+import { Locale } from "../util/locale"
+import { useDialog } from "../../../tui/src/ui/dialog"
+import { useToast } from "../../../tui/src/ui/toast"
+import { createFadeIn } from "../../../tui/src/util/signal"
+import { DialogSkill } from "./dialog-skill"
+import { useConfig } from "../../../tui/src/config/index"
+import { useClipboard } from "../../../tui/src/context/clipboard"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import { usePromptRef } from "../../../tui/src/context/prompt"
+import { Keymap } from "../../../tui/src/context/keymap"
+import { useTuiPaths } from "../../../tui/src/context/runtime"
+import { useAutocompleteHost } from "../context/autocomplete-host"
+import type { KeymapCommand } from "../../../tui/src/context/keymap"
+import { useVimMode } from "../feature/vim-mode"
+import { getLeaderMenu, isSeparator, type LeaderGroup, type LeaderLeaf, type LeaderSeparator } from "../feature/leader-menu"
+import { loadVimConfig } from "../config/vim"
+import { loadQuickModelConfig, formatSlotModel, quickModelVersion } from "../config/quick-model"
+import { isForcedFreeOnly, isModelFree } from "../config/model-filter"
 
 export type PromptProps = {
   sessionID?: string
@@ -85,11 +83,6 @@ export type MinimalPromptRef = PromptRef & {
   interrupt(): void
 }
 
-const money = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-})
-
 const DRAFT_RETENTION_MIN_CHARS = 20
 
 function randomIndex(count: number) {
@@ -114,19 +107,6 @@ function getEditorRangeLabel(selection: EditorSelection["ranges"][number]) {
   return `#${selection.selection.start.line}-${selection.selection.end.line}`
 }
 
-function formatEditorContext(selection: EditorSelection) {
-  const selected = selection.ranges.filter(hasEditorRangeSelection)
-  if (selected.length === 0)
-    return `<system-reminder>Note: The user opened the file "${selection.filePath}". This may or may not be relevant to the current task.</system-reminder>\n`
-
-  const ranges = selected.map((range, index) => {
-    const prefix = selected.length > 1 ? `Selection ${index + 1}: ` : ""
-    return `Note: The user selected ${prefix}${getEditorRangeLabel(range)} from "${selection.filePath}". \`\`\`${range.text}\`\`\`\n\n`
-  })
-
-  return `<system-reminder>${ranges.join("\n")} This may or may not be relevant to the current task.</system-reminder>\n`
-}
-
 let stashed: { prompt: PromptInfo; cursor: number } | undefined
 
 export function Prompt(props: PromptProps) {
@@ -137,6 +117,16 @@ export function Prompt(props: PromptProps) {
   const vimMode = useVimMode()
   const paths = useTuiPaths()
   const location = useLocation()
+  const local = useLocal()
+  const promptRef = usePromptRef()
+  const editor = useEditorContext()
+  const route = useRoute()
+  const client = useClient()
+  const data = useData()
+  const clipboard = useClipboard()
+  const config = useConfig().data
+  const dialog = useDialog()
+  const toast = useToast()
   const vimConfig = createMemo(() => loadVimConfig(location.current?.directory ?? paths.cwd))
   const vimHidePrompt = createMemo(() => vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => vimConfig().autoResume ?? false)
@@ -148,7 +138,6 @@ export function Prompt(props: PromptProps) {
     return ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => {
       const model = cfg.slots[k]
       const idx = model?.indexOf("/") ?? -1
-      const providers = data.location.provider.list(location.ref) ?? []
       const models = data.location.model.list(location.ref) ?? []
       const visible =
         model &&
@@ -261,17 +250,6 @@ export function Prompt(props: PromptProps) {
     }
     return maxLen + 4
   })
-  const local = useLocal()
-  const promptRef = usePromptRef()
-  const args = useArgs()
-  const editor = useEditorContext()
-  const route = useRoute()
-  const client = useClient()
-  const data = useData()
-  const clipboard = useClipboard()
-  const config = useConfig().data
-  const dialog = useDialog()
-  const toast = useToast()
   const status = createMemo(() => data.session.status(props.sessionID ?? ""))
   const running = createMemo(() => status() === "running")
   const [activityFrame, setActivityFrame] = createSignal(0)
@@ -740,9 +718,9 @@ export function Prompt(props: PromptProps) {
     [
       {
         title: "Stash prompt",
-        name: "prompt.stash",
+        id: "prompt.stash",
         group: "Prompt",
-      enabled: !!store.prompt.text,
+        enabled: !!store.prompt.text,
         run: () => {
           if (!store.prompt.text) return
           stash.push({ prompt: store.prompt })
@@ -755,7 +733,7 @@ export function Prompt(props: PromptProps) {
       },
       {
         title: "Stash pop",
-        name: "prompt.stash.pop",
+        id: "prompt.stash.pop",
         group: "Prompt",
         enabled: stash.list().length > 0,
         run: () => {
@@ -771,7 +749,7 @@ export function Prompt(props: PromptProps) {
       },
       {
         title: "Stash list",
-        name: "prompt.stash.list",
+        id: "prompt.stash.list",
         group: "Prompt",
         enabled: stash.list().length > 0,
         run: () => {

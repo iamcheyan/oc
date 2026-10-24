@@ -1,6 +1,5 @@
 import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
-import type { SessionMessage } from "@opencode/schema"
 
 type Part = { type: "text" | "reasoning" | "tool"; id?: string; name?: string; state?: { status: string } }
 

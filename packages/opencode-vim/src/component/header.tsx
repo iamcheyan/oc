@@ -1,9 +1,9 @@
 import { Show } from "solid-js"
-import { useLocation } from "@tui/context/location"
-import { useLocal } from "@tui/context/local"
-import { useRoute } from "@tui/context/route"
-import { useData } from "@tui/context/data"
-import { useForkTheme } from "@/util/theme"
+import { useLocation } from "../../../tui/src/context/location"
+import { useLocal } from "../../../tui/src/context/local"
+import { useRoute } from "../../../tui/src/context/route"
+import { useData } from "../../../tui/src/context/data"
+import { useForkTheme } from "../util/theme"
 
 function activeModelLabel() {
   const local = useLocal()

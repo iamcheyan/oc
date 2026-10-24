@@ -13,6 +13,8 @@ import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
 import { epilogue, type SessionEpilogue } from "./util/presentation"
 import { Selection } from "./util/selection"
+// FORK-SEAM (opencode-vim): install minimal vim root components.
+import { installMinimalRootComponents } from "../../opencode-vim/src/root-components"
 import {
   CliRenderEvents,
   createCliRenderer,
@@ -209,6 +211,10 @@ export type TuiInput = {
 }
 
 export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
+  // FORK-SEAM (opencode-vim): install minimal vim root components by default unless disabled.
+  if (process.env.OPENCODE_VIM !== "0" && !process.env.OPENCODE_STORY && !process.env.OPENCODE_DRIVE) {
+    installMinimalRootComponents()
+  }
   const log = input.log ?? (() => {})
   const global = yield* Global.Service
   const config = Config.resolve(yield* Effect.tryPromise(() => input.config.get()), {
@@ -609,7 +615,12 @@ function App() {
   const pasteSummaryEnabled = () => config.data.prompt?.paste !== "full"
   const tabsVertical = () =>
     config.data.tabs.layout === "vertical" && sessionTabsFitVertically(dimensions().width, tabsResize.size())
-  const tabsAvailable = () => sessionTabs.enabled() && sessionTabs.tabs().length > 0 && route.data.type !== "plugin"
+  // FORK-SEAM (opencode-vim): suppress upstream session tabs when minimal root components are registered.
+  const tabsAvailable = () =>
+    !(globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS &&
+    sessionTabs.enabled() &&
+    sessionTabs.tabs().length > 0 &&
+    route.data.type !== "plugin"
   const fullscreenPanel = () =>
     route.data.type === "session" &&
     panels.current()?.sessionID === route.data.sessionID &&
@@ -731,7 +742,7 @@ function App() {
     if (config.data.highlights === false) return
     if (route.data.type !== "home" || dialog.stack.length > 0 || promptRef.current?.current.text) return
     if (args.prompt || args.continue || args.sessionID || args.newSessionID) return
-    if (process.env.OPENCODE_DRIVE || process.env.OPENCODE_STORY || process.env.OPENCODE_ROUTE) return
+    if (process.env.OPENCODE_DRIVE || process.env.OPENCODE_STORY || process.env.OPENCODE_ROUTE || (globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS) return
     void claim(storage, {
       version: app.version,
       count: items.length,
@@ -1459,7 +1470,7 @@ function App() {
           <PaneResizeHandle resize={tabsResize} left={tabsResize.size() - 1} />
         </Show>
       </box>
-      <Show when={devtools() && !(route.data.type === "plugin" && route.data.id === "opencode.stats")}>
+      <Show when={devtools() && !(globalThis as any).OPENCODE_TUI_ROOT_COMPONENTS && !(route.data.type === "plugin" && route.data.id === "opencode.stats")}>
         <DevToolsBar />
       </Show>
       <Show when={!startup.skipInitialLoading}>

@@ -1,8 +1,8 @@
-import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
+import { DialogSelect, type DialogSelectOption } from "../../../tui/src/ui/dialog-select"
 import { createMemo, createResource } from "solid-js"
-import { useDialog } from "@tui/ui/dialog"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
+import { useDialog } from "../../../tui/src/ui/dialog"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
 
 export type DialogSkillProps = {
   onSelect: (skill: string) => void

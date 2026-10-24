@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs"
 import { execSync } from "node:child_process"
 import path from "node:path"
-import { stripJsonComments } from "@/util/jsonc"
+import { stripJsonComments } from "../util/jsonc"
 
 export type LeaderAction =
   | "tui"

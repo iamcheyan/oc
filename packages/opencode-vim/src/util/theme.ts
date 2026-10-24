@@ -1,9 +1,9 @@
 import { RGBA } from "@opentui/core"
 import { createEffect, createMemo } from "solid-js"
 import { useRenderer } from "@opentui/solid"
-import { useThemes } from "@tui/context/theme"
-import { isMinimalTuiEnabled } from "@/context/minimal"
-import { applyMinimalThemeOverrides, type MinimalThemeShape } from "@/util/theme-minimal"
+import { useThemes } from "../../../tui/src/context/theme"
+import { isMinimalTuiEnabled } from "../context/minimal"
+import { applyMinimalThemeOverrides, type MinimalThemeShape } from "./theme-minimal"
 
 export function useForkTheme() {
   const themes = useThemes()
@@ -33,4 +33,4 @@ export function selectedForeground(theme: { text: { base: RGBA; muted: RGBA } },
   return luminance(background) > 0.5 ? theme.text.base : theme.text.muted
 }
 
-export { tint } from "@tui/theme/color"
+export { tint } from "../../../tui/src/theme/color"

@@ -1,9 +1,9 @@
 import { createMemo, Show } from "solid-js"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import { useForkTheme } from "@/util/theme"
-import { Slot } from "@tui/plugin/render"
-import { getScrollAcceleration } from "@tui/util/scroll"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import { useForkTheme } from "../util/theme"
+import { Slot } from "../../../tui/src/plugin/render"
+import { getScrollAcceleration } from "../../../tui/src/util/scroll"
 
 export function Sidebar(props: { sessionID: string; overlay?: boolean; compact?: boolean; bare?: boolean; hideFooter?: boolean }) {
   const data = useData()

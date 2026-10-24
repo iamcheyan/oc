@@ -1,13 +1,15 @@
 export type {
   ProviderTestEntry,
   ProviderTestResult,
-} from "@opencode-ai/api-test"
+} from "../../../miniapps/api-test/src/api-test"
 
 export {
   loadConfig,
   getTestableProviders,
   testProvider,
   testAuth,
-} from "@opencode-ai/api-test"
+} from "../../../miniapps/api-test/src/api-test"
 
-export { P as colors, getColumnWidthsByTerminalWidth, formatRow, type ColumnWidths } from "@opencode-ai/api-test/ui"
+export { P, getColumnWidthsByTerminalWidth, formatRow, type ColumnWidths } from "../../../miniapps/api-test/src/api-test-ui"
+import { P } from "../../../miniapps/api-test/src/api-test-ui"
+export const colors = P

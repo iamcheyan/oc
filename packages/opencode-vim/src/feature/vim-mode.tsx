@@ -1,12 +1,12 @@
 import { createSignal, createEffect, createMemo, type Accessor, Show, onMount, onCleanup, For } from "solid-js"
 import { useBindings } from "@opentui/keymap/solid"
-import { Keymap } from "@tui/context/keymap"
+import { Keymap } from "../../../tui/src/context/keymap"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
-import { loadVimConfig } from "@/config/vim"
-import { useForkTheme } from "@/util/theme"
+import { loadVimConfig } from "../config/vim"
+import { useForkTheme } from "../util/theme"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { TextAttributes, RGBA, type ScrollBoxRenderable } from "@opentui/core"
-import type { MinimalPromptRef } from "@/component/prompt"
+import type { MinimalPromptRef } from "../component/prompt"
 import { existsSync, statSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 import os from "node:os"
@@ -18,17 +18,17 @@ import {
   type LeaderAction,
   isSeparator,
   getLeaderMenu,
-} from "@/feature/leader-menu"
-import { performConfigBackup, performFullBackup, performFullRestore } from "../util/backup"
-import { loadConfig, getTestableProviders, testProvider, testAuth, type ProviderTestEntry, type ProviderTestResult, colors, getColumnWidthsByTerminalWidth, formatRow, type ColumnWidths } from "../util/api-test"
-import { loadQuickModelConfig, getSlotModel } from "@/config/quick-model"
-import { DialogQuickModel } from "@/component/dialog-quick-model"
-import { DialogForkModel } from "@/component/dialog-model"
-import { useLocal } from "@tui/context/local"
-import { isForcedFreeOnly, isModelFree } from "@/config/model-filter"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import type { DialogContext } from "@tui/ui/dialog"
+} from "./leader-menu"
+import { performFullBackup, performFullRestore } from "../util/backup"
+import { loadConfig, getTestableProviders, testProvider, testAuth, type ProviderTestEntry, type ProviderTestResult, colors, getColumnWidthsByTerminalWidth, formatRow } from "../util/api-test"
+import { loadQuickModelConfig, getSlotModel } from "../config/quick-model"
+import { DialogQuickModel } from "../component/dialog-quick-model"
+import { DialogForkModel } from "../component/dialog-model"
+import { useLocal } from "../../../tui/src/context/local"
+import { isForcedFreeOnly, isModelFree } from "../config/model-filter"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import type { DialogContext } from "../../../tui/src/ui/dialog"
 
 
 export type { LeaderGroup, LeaderLeaf, LeaderSeparator, LeaderAction }
@@ -437,7 +437,7 @@ export function DialogTestAPI(props: { dialog: DialogContext }) {
   const [providers, setProviders] = createSignal<ProviderTestEntry[]>([])
   const [selectedIndex, setSelectedIndex] = createSignal(0)
   const [isTesting, setIsTesting] = createSignal(false)
-  const [testingIndex, setTestingIndex] = createSignal(-1)
+  const [, setTestingIndex] = createSignal(-1)
   let abortController = new AbortController()
 
   // Use colors from standalone
@@ -446,7 +446,6 @@ export function DialogTestAPI(props: { dialog: DialogContext }) {
   const DIM = colors.dim
   const HIGHLIGHT = colors.highlight
   const CYAN = colors.cyan
-  const AMBER = colors.amber
   const TEXT = colors.text
   const MUTED = colors.muted
   const BORDER = colors.border
@@ -694,7 +693,6 @@ export function DialogTestAPI(props: { dialog: DialogContext }) {
         <For each={results()}>
           {(r: ProviderTestResult, i) => {
             const isSelected = createMemo(() => selectedIndex() === i())
-            const isCurrentlyTesting = createMemo(() => testingIndex() === i())
 
             const apiIcon = r.status === "success" ? "✓" : r.status === "error" ? "✗" : r.status === "testing" ? "⏳" : "○"
             const apiLabel = r.status === "success"
@@ -902,7 +900,6 @@ export function useVimSession(
   const location = useLocation()
   const enterFocusPrompt = () => loadVimConfig(directory()).enterFocusPrompt ?? true
   let wasNormal: boolean | undefined = undefined
-  let spaceActive = false
 
   const selectableItems = createMemo(() => {
     const group = menu().find((item) => item.key === leaderGroup())
@@ -937,7 +934,6 @@ export function useVimSession(
       promptRef()?.blur()
     }
     if (!normal && wasNormal !== false) {
-      spaceActive = false
       copyMode.exit()
     }
     

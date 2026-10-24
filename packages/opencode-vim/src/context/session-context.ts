@@ -1,7 +1,6 @@
 import { createContext } from "solid-js"
-import type { Provider } from "@opencode/schema"
-import type { useConfig } from "@tui/config"
-import type { ThinkingMode } from "@tui/context/thinking"
+import type { useConfig } from "../../../tui/src/config/index"
+import type { ThinkingMode } from "../../../tui/src/context/thinking"
 
 export type SessionContextValue = {
   width: number

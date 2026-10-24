@@ -1,13 +1,13 @@
 import { createMemo, createSignal } from "solid-js"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import { useLocal } from "@tui/context/local"
-import { useDialog } from "@tui/ui/dialog"
-import { DialogSelect } from "@tui/ui/dialog-select"
-import { DialogVariant } from "@tui/component/dialog-variant"
-import { DialogProvider } from "@tui/ui/dialog"
-import { isForcedFreeOnly, isFreeOpenCodeModel } from "@/config/model-filter"
-import { useBindings } from "@opentui/keymap/solid"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import { useLocal } from "../../../tui/src/context/local"
+import { useDialog } from "../../../tui/src/ui/dialog"
+import { DialogSelect } from "../../../tui/src/ui/dialog-select"
+import { DialogVariant } from "../../../tui/src/component/dialog-variant"
+import { DialogIntegration } from "../../../tui/src/component/dialog-integration"
+import { Keymap } from "../../../tui/src/context/keymap"
+import { isForcedFreeOnly, isFreeOpenCodeModel } from "../config/model-filter"
 
 type ModelValue = { providerID: string; modelID: string }
 
@@ -51,11 +51,24 @@ export function DialogForkModel() {
     if (variants.length) return dialog.replace(() => <DialogVariant />)
     dialog.clear()
   }
-  return <DialogSelect<ModelValue> options={options()} actions={[{ command: "model.dialog.provider", title: "Connect provider", selection: "none", onTrigger: () => dialog.replace(() => <DialogProvider />) }, { command: "model.dialog.favorite", title: "Favorite", onTrigger: (option) => local.model.toggleFavorite(option.value) }]} onFilter={setQuery} flat skipFilter title={freeOnly() ? "Select free model" : "Select model"} current={local.model.current()} emptyView={<box><text>No {freeOnly() ? "free " : ""}models found</text></box>} />
+  return <DialogSelect<ModelValue> options={options()} actions={[{ command: "model.dialog.provider", title: "Connect provider", selection: "none", onTrigger: () => dialog.replace(() => <DialogIntegration onConnected={() => dialog.replace(() => <DialogForkModel />)} />) }, { command: "model.dialog.favorite", title: "Favorite", onTrigger: (option) => local.model.toggleFavorite(option.value) }]} onFilter={setQuery} flat skipFilter title={freeOnly() ? "Select free model" : "Select model"} current={local.model.current()} emptyView={<box><text>No {freeOnly() ? "free " : ""}models found</text></box>} />
 }
 
 export function ForkModelCommand() {
   const dialog = useDialog()
-  useBindings(() => ({ commands: [{ namespace: "palette", name: "model.list", title: "Switch model", suggested: true, category: "Agent", slashName: "models", slashAliases: ["mo"], run: () => dialog.replace(() => <DialogForkModel />) }] }))
+  Keymap.createLayer(() => ({
+    mode: "global",
+    commands: [
+      {
+        id: "model.list",
+        title: "Switch model",
+        group: "Agent",
+        palette: true,
+        suggested: true,
+        slash: { name: "models", aliases: ["mo"] },
+        run: () => dialog.replace(() => <DialogForkModel />),
+      },
+    ],
+  }))
   return null
 }

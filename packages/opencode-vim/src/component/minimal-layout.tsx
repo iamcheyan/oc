@@ -1,14 +1,13 @@
 import { createMemo, createSignal, Show } from "solid-js"
 import type { JSX } from "@opentui/solid"
-import { Slot } from "@tui/plugin/render"
-import { useLocation } from "@tui/context/location"
-import { useLocal } from "@tui/context/local"
-import { selectedForeground, useForkTheme } from "@/util/theme"
+import { useLocation } from "../../../tui/src/context/location"
+import { useLocal } from "../../../tui/src/context/local"
+import { selectedForeground, useForkTheme } from "../util/theme"
 import { TextAttributes } from "@opentui/core"
-import { Locale } from "@/util/locale"
-import { useVimMode } from "@/feature/vim-mode"
-import { Prompt, type PromptRef } from "@/component/prompt"
-import type { LeaderGroup } from "@/feature/leader-menu"
+import { Locale } from "../util/locale"
+import { useVimMode } from "../feature/vim-mode"
+import { Prompt, type PromptRef } from "./prompt"
+import type { LeaderGroup } from "../feature/leader-menu"
 
 export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean }) {
   const local = useLocal()
@@ -74,6 +73,7 @@ export function MinimalStatusBar(props: { sessionID?: string; pureMode?: boolean
 
 export function MinimalHomePromptFooter(props: {
   bind: (ref: PromptRef | undefined) => void
+  menu?: LeaderGroup[]
   placeholders?: { normal?: string[]; shell?: string[] }
   onUpWhenEmpty?: () => void
   onDownWhenEmpty?: () => void
@@ -81,17 +81,15 @@ export function MinimalHomePromptFooter(props: {
 }) {
   return (
     <box flexShrink={0} width="100%">
-      <Slot path="prompt.footer" input={{ mode: "normal", showDetails: true }}>
-        <Prompt
-          compact
-          ref={props.bind}
-          right={<Slot path="prompt.footer.status" input={{ mode: "normal", showDetails: true }} />}
-          placeholders={props.placeholders}
-          onUpWhenEmpty={props.onUpWhenEmpty}
-          onDownWhenEmpty={props.onDownWhenEmpty}
-          onEnterEmpty={props.onEnterEmpty}
-        />
-      </Slot>
+      <Prompt
+        compact
+        ref={props.bind}
+        menu={props.menu}
+        placeholders={props.placeholders}
+        onUpWhenEmpty={props.onUpWhenEmpty}
+        onDownWhenEmpty={props.onDownWhenEmpty}
+        onEnterEmpty={props.onEnterEmpty}
+      />
     </box>
   )
 }
@@ -107,21 +105,16 @@ export function MinimalSessionPromptFooter(props: {
 }) {
   return (
     <box flexShrink={0} width="100%">
-      <Slot
-        path="session.composer.top"
-        input={{ sessionID: props.sessionID }}
-      >
-        <Prompt
-          compact
-          visible={props.visible}
-          ref={props.bind}
-          disabled={props.disabled}
-          onSubmit={props.onSubmit}
-          sessionID={props.sessionID}
-          menu={props.menu}
-          right={props.right ?? <Slot path="prompt.footer.status" input={{ mode: "normal", showDetails: true }} />}
-        />
-      </Slot>
+      <Prompt
+        compact
+        visible={props.visible}
+        ref={props.bind}
+        disabled={props.disabled}
+        onSubmit={props.onSubmit}
+        sessionID={props.sessionID}
+        menu={props.menu}
+        right={props.right}
+      />
     </box>
   )
 }

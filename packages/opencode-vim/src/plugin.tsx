@@ -3,13 +3,15 @@ import type { KeymapLayer } from "@opencode/plugin/tui/context"
 import { Show } from "solid-js"
 import { MinimalHome } from "./routes/home"
 import { MinimalSession } from "./routes/session"
-import { useLocal } from "@tui/context/local"
-import { useLocation } from "@tui/context/location"
-import { useTheme } from "@tui/context/theme"
+import { installMinimalRootComponents } from "./root-components"
+import { useLocal } from "../../tui/src/context/local"
+import { useLocation } from "../../tui/src/context/location"
+import { useTheme } from "../../tui/src/context/theme"
 
 export const VimPlugin = Plugin.define({
   id: "opencode.vim",
   setup(context) {
+    installMinimalRootComponents()
     context.ui.router.register({ name: "vim-home", render: () => <MinimalHome /> })
     context.ui.router.register({ name: "vim-session", render: ({ data }) => {
       const current = context.ui.router.current()
@@ -21,10 +23,9 @@ export const VimPlugin = Plugin.define({
     context.keymap.layer((): KeymapLayer => ({
       mode: "global",
       commands: [
-        { id: "vim.home", title: "Go home", group: "Vim", bind: "g g", run: () => context.ui.router.navigate({ type: "plugin", name: "vim-home" }) },
+        { id: "vim.home", title: "Go home", group: "Vim", bind: false, run: () => context.ui.router.navigate({ type: "home" }) },
         { id: "vim.next-session", title: "Next session", group: "Vim", bind: "] s", run: () => moveTab(context.ui.tabs.list(), context.ui.tabs.focus, 1) },
         { id: "vim.previous-session", title: "Previous session", group: "Vim", bind: "[ s", run: () => moveTab(context.ui.tabs.list(), context.ui.tabs.focus, -1) },
-
       ],
     }))
   },
@@ -38,6 +39,7 @@ function moveTab(tabs: readonly { readonly sessionID: string; readonly active: b
 }
 
 function HomeFooter() {
+  if ((globalThis as { OPENCODE_TUI_ROOT_COMPONENTS?: unknown }).OPENCODE_TUI_ROOT_COMPONENTS) return null
   const local = useLocal()
   const theme = useTheme()
   return <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
@@ -47,6 +49,7 @@ function HomeFooter() {
 }
 
 function SessionFooter() {
+  if ((globalThis as { OPENCODE_TUI_ROOT_COMPONENTS?: unknown }).OPENCODE_TUI_ROOT_COMPONENTS) return null
   const local = useLocal()
   const location = useLocation()
   const theme = useTheme()

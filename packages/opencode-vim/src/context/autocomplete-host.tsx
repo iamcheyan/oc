@@ -1,6 +1,6 @@
 import { createContext, Show, useContext, type ParentProps } from "solid-js"
 import { createStore } from "solid-js/store"
-import { Autocomplete } from "@/component/autocomplete"
+import { Autocomplete } from "../component/autocomplete"
 
 type AutocompleteHostProps = Parameters<typeof Autocomplete>[0]
 

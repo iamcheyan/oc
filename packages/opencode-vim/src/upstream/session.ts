@@ -1,10 +1,10 @@
 // Keep all upstream session-route internals behind one fork adapter.
 // If upstream refactors these symbols, this file is the first sync checkpoint.
 import { useContext } from "solid-js"
-import { SessionContext } from "@/context/session-context"
+import { SessionContext } from "../context/session-context"
 
 export { SessionContext }
-export type { SessionContextValue } from "@/context/session-context"
+export type { SessionContextValue } from "../context/session-context"
 
 export const sessionBindingCommands = [
   "session.share",
@@ -43,5 +43,5 @@ export function useSession() {
   return ctx
 }
 
-export { DialogMessage } from "@tui/routes/session/dialog-message"
-export { PermissionPrompt } from "@tui/routes/session/permission"
+export { DialogMessage } from "../../../tui/src/routes/session/dialog-message"
+export { PermissionPrompt } from "../../../tui/src/routes/session/permission"

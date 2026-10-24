@@ -1,18 +1,18 @@
 import { createSignal, createMemo, Show, For, onMount } from "solid-js"
 import { useBindings } from "@opentui/keymap/solid"
 import { reactiveMatcherFromSignal } from "@opentui/keymap/solid"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import { useForkTheme } from "@/util/theme"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import { useForkTheme } from "../util/theme"
 import { RGBA, TextAttributes, type TextareaRenderable } from "@opentui/core"
-import type { DialogContext } from "@tui/ui/dialog"
+import type { DialogContext } from "../../../tui/src/ui/dialog"
 import {
   loadQuickModelConfig,
   saveQuickModelConfig,
   formatSlotModel,
   type QuickModelConfig,
-} from "@/config/quick-model"
-import { isForcedFreeOnly, isFreeOpenCodeModel, isModelFree } from "@/config/model-filter"
+} from "../config/quick-model"
+import { isForcedFreeOnly, isFreeOpenCodeModel, isModelFree } from "../config/model-filter"
 
 const MAX_VISIBLE = 10
 const SLOTS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]

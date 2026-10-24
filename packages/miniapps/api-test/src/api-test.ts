@@ -174,14 +174,8 @@ export function getTestableProviders(config: OpenCodeConfig): ProviderTestEntry[
     for (const account of antigravityConfig.accounts) {
       if (!account.enabled) continue
 
-      const quota = account.cachedQuota
-      const geminiFlashQuota = quota?.["gemini-flash"]
-      const geminiProQuota = quota?.["gemini-pro"]
-
       const modelId = "gemini-3.1-pro"
       const modelName = "Gemini 3.1 Pro"
-      const remainingFraction = geminiProQuota?.remainingFraction ?? geminiFlashQuota?.remainingFraction ?? 0
-      const resetTime = geminiProQuota?.resetTime ?? geminiFlashQuota?.resetTime ?? ""
 
       const emailUsername = account.email.split("@")[0]
 

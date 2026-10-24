@@ -1,12 +1,12 @@
 import { TextAttributes } from "@opentui/core"
 import { Switch, Match, Show, createMemo, For, type JSX } from "solid-js"
-import { useForkTheme } from "@/util/theme"
-import { useSession } from "@/upstream/session"
-import { usePathFormatter } from "@tui/context/path-format"
-import { useData } from "@tui/context/data"
-import * as Locale from "@/util/locale"
+import { useForkTheme } from "../util/theme"
+import { useSession } from "../upstream/session"
+import { usePathFormatter } from "../../../tui/src/context/path-format"
+import { useData } from "../../../tui/src/context/data"
+import * as Locale from "../util/locale"
 import type { JsonValue, SessionMessageAssistantTool as Part } from "@opencode/client"
-import { filetype } from "@/util/filetype"
+import { filetype } from "../util/filetype"
 
 const ansiRegex = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][0-9;]*[a-zA-Z].*?(?:\x1b\\|$)|[\x80-\x9f]|[\x1b\x9b]\][^\x1b\x9a]*\x07/g
 

@@ -2,31 +2,44 @@
 
 Scope: `packages/opencode-vim/**`.
 
-## Ownership
+## Ownership & Purpose
 
-- This package is the fork-specific Vim TUI frontend.
-- Prefer keeping fork-owned minimal-mode behavior here instead of directly editing upstream TUI files.
-- Treat this package as the only fork-owned interactive frontend.
+- This package is the fork-specific minimal Vim TUI frontend for OpenCode 2.
+- All minimal-mode routes (`MinimalHome`, `MinimalSession`), Vim normal/insert state, Leader menu (`<Space>`), bottom status bar, compact prompt, and `/` / `@` autocomplete live here.
+- Keep upstream `packages/tui` untouched except for the single allowlisted seam in `packages/tui/src/app.tsx`.
 
-## Boundaries
+## Architecture & Entrypoints
 
-- Keep upstream default TUI behavior unchanged unless a very small bridge change is unavoidable.
-- Put minimal-mode entrypoints, startup defaults, and package-local UI composition here.
-- If a shared helper must be added upstream, keep the upstream change thin and neutral.
+1. **Direct Root Component Registration (`src/root-components.ts`)**:
+   - `installMinimalRootComponents()` sets `globalThis.OPENCODE_TUI_ROOT_COMPONENTS = { Home: MinimalHome, Session: MinimalSession }`.
+   - Called at module load by `packages/tui/src/app.tsx` (`FORK-SEAM (opencode-vim)`) so that every CLI/TUI launch boots directly into the minimal Vim UI.
+2. **TUI Plugin Bundle (`src/plugin.tsx` & `script/build.ts`)**:
+   - Exports the external TUI plugin entry (`fork/dist/plugin/tui.js`) and calls `installMinimalRootComponents()` on install.
+3. **Key Files Map**:
+   - `src/routes/home.tsx`: `MinimalHome` route, auto-resume, Leader commands, Vim settings toggles.
+   - `src/routes/session.tsx`: `MinimalSession` route, compact message stream, tool visibility (`hideTools`), `pureMode`, permission auto-allow, Normal-mode navigation (`j`/`k`/`gg`/`G`/`/commands`).
+   - `src/component/prompt.tsx`: Minimal prompt input, Normal/Insert mode transitions (`i`, `a`, `<Esc>`), Leader trigger (`<Space>`), quick model slots, stash/history integration.
+   - `src/component/autocomplete.tsx`: `/` slash command and `@` file/agent autocomplete popup (uses OpenCode 2 `Keymap.createLayer({ mode: "autocomplete" })` and calculates coordinates relative to `container.parent`).
+   - `src/component/minimal-layout.tsx`: Bottom status bar (`INSERT` / `NORMAL`, agent badge, model & token info, `LEADER MENU` popup).
+   - `src/component/dialog-model.tsx` & `src/component/dialog-vim-settings.tsx`: Model picker and Vim settings dialog (using OpenCode 2 `DialogIntegration` and `Keymap.createLayer`).
+   - `src/config/vim.ts`: Persistent `~/.config/opencode/vim.json` reactive config (`loadVimConfig`, `saveVimConfig`).
 
-## Upstream-Derived UI
+## Critical Rules for OpenCode 2 Compatibility
 
-- Several minimal-mode surfaces are fork-owned copies or trimmed adaptations of upstream TUI behavior rather than fresh implementations.
-- Before changing compact message rendering, prompt behavior, status/footer layout, or session interaction flows, compare the fork file with the upstream counterpart and carry over any relevant upstream fixes first.
-- Treat these files as upstream-derived sync checkpoints:
-  - `src/routes/session.tsx`: compact session transcript, markdown/reasoning rendering, assistant footer behavior.
-  - `src/component/prompt.tsx`: minimal prompt behavior and compact prompt layout.
-  - `src/component/minimal-layout.tsx`: minimal status bar and prompt footer composition.
-  - `src/upstream/session.ts` and `src/upstream/thread.ts`: upstream adapter boundaries to inspect first after upstream refactors.
-- When a bug appears in one of those areas, do not assume the fork logic is standalone. Check whether upstream already fixed the same behavior and then re-apply the relevant part in the forked copy.
+1. **Use Relative Imports to `packages/tui/src/**`**:
+   - Never use `@/*` or `@tui/*` imports in `packages/opencode-vim/src/**`.
+   - Always use relative paths (e.g. `../../tui/src/context/data`, `../../../tui/src/ui/dialog`) so `packages/cli`, `packages/tui`, and `packages/opencode-vim` share the exact same module instances and SolidJS contexts without modifying upstream `tsconfig.json` files.
+2. **Use OpenCode 2 Keymap & Dialog APIs**:
+   - Register modal keybindings with `Keymap.createLayer({ id, description, mode, bindings })` instead of V1's removed `useBindings`.
+   - Register command palette entries with `id:` (not V1's `name:`).
+   - Wrap custom dialogs with `DialogIntegration` (not V1's `DialogProvider`).
+3. **Do Not Wrap Minimal Footers in Upstream `<Slot>`**:
+   - In `src/component/minimal-layout.tsx`, render minimal status bars directly instead of wrapping them in upstream `<Slot name="home_prompt" mode="replace">`, otherwise upstream `tui:core` plugins will overwrite the minimal Vim status bar.
 
 ## Validation
 
-- Run `cd packages/opencode-vim && bun test` after package logic changes.
-- Run `cd packages/opencode-vim && bun typecheck` after touching types or command wiring.
-- Treat repo-wide type errors outside this package as separate debt unless they block this package directly.
+```bash
+cd packages/opencode-vim
+bun test
+bun run typecheck
+```

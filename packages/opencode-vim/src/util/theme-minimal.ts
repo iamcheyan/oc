@@ -1,5 +1,5 @@
 import { RGBA } from "@opentui/core"
-import { isMinimalTuiEnabled } from "@/context/minimal"
+import { isMinimalTuiEnabled } from "../context/minimal"
 
 const TRANSPARENT_BACKGROUND = RGBA.fromInts(0, 0, 0, 0)
 

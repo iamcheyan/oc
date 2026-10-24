@@ -1,25 +1,25 @@
-import type { PromptRef } from "@/component/prompt"
+import type { MinimalPromptRef, PromptRef } from "../component/prompt"
 import { createEffect, createMemo, createSignal, onMount, Show, untrack } from "solid-js"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import { useClient } from "@tui/context/client"
-import { useRoute } from "@tui/context/route"
-import { Toast, useToast } from "@tui/ui/toast"
-import { useArgs } from "@tui/context/args"
-import { usePromptRef } from "@tui/context/prompt"
-import { useLocal } from "@tui/context/local"
-import { useEditorContext } from "@tui/context/editor"
-import { useDialog } from "@tui/ui/dialog"
-import { Keymap } from "@tui/context/keymap"
-import { nextThinkingMode } from "@tui/context/thinking"
-import { MinimalRendererBackground, useForkTheme } from "@/util/theme"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import { useClient } from "../../../tui/src/context/client"
+import { useRoute } from "../../../tui/src/context/route"
+import { useToast } from "../../../tui/src/ui/toast"
+import { useArgs } from "../../../tui/src/context/args"
+import { usePromptRef } from "../../../tui/src/context/prompt"
+import { useLocal } from "../../../tui/src/context/local"
+import { useEditorContext } from "../../../tui/src/context/editor"
+import { useDialog } from "../../../tui/src/ui/dialog"
+import { Keymap } from "../../../tui/src/context/keymap"
+import { nextThinkingMode } from "../../../tui/src/context/thinking"
+import { MinimalRendererBackground, useForkTheme } from "../util/theme"
 
-import { AutocompleteHostProvider } from "@/context/autocomplete-host"
-import { MinimalHomePromptFooter, MinimalStatusBar } from "@/component/minimal-layout"
-import { getLeaderMenu, useVimHome, useVimMode } from "@/feature/vim-mode"
-import { loadVimConfig, saveVimConfig } from "@/config/vim"
-import { ForkModelCommand } from "@/component/dialog-model"
-import { ModelFreeGuard } from "@/component/model-free-guard"
+import { AutocompleteHostProvider } from "../context/autocomplete-host"
+import { MinimalHomePromptFooter, MinimalStatusBar } from "../component/minimal-layout"
+import { getLeaderMenu, useVimHome, useVimMode } from "../feature/vim-mode"
+import { loadVimConfig, saveVimConfig } from "../config/vim"
+import { ForkModelCommand } from "../component/dialog-model"
+import { ModelFreeGuard } from "../component/model-free-guard"
 
 let seededHomePrompt = false
 
@@ -48,7 +48,8 @@ export function MinimalHome() {
   const vimConfig = createMemo(() => loadVimConfig(directory()))
   const vimHidePrompt = createMemo(() => vimConfig().hidePrompt ?? false)
   const vimAutoResume = createMemo(() => vimConfig().autoResume ?? false)
-  const pureMode = createMemo(() => false)
+  const pureMode = createMemo(() => vimConfig().pureMode ?? false)
+  const hideTools = createMemo(() => vimConfig().hideTools ?? false)
   const autoAllowPermissions = createMemo(() => vimConfig().autoAllowPermissions ?? false)
   const sessions = () => data.session.list()
   let sent = false
@@ -148,7 +149,19 @@ export function MinimalHome() {
         category: "Vim",
         run: () => {
           const next = !pureMode()
+          saveVimConfig(directory(), { pureMode: next })
           toast.show({ message: `Pure mode: ${next ? "ON" : "OFF"}`, variant: "info", duration: 2000 })
+          dialog.clear()
+        },
+      },
+      {
+        id: "vim.toggle.hideTools",
+        title: "Toggle hide tools",
+        category: "Vim",
+        run: () => {
+          const next = !hideTools()
+          saveVimConfig(directory(), { hideTools: next })
+          toast.show({ message: `Hide tools: ${next ? "ON" : "OFF"}`, variant: "info", duration: 2000 })
           dialog.clear()
         },
       },
@@ -177,7 +190,7 @@ export function MinimalHome() {
   })
 
   useVimHome(
-    () => ref() as import("@/component/prompt").MinimalPromptRef | undefined,
+    () => ref() as MinimalPromptRef | undefined,
     dialog,
     directory,
     leaderMenu,
@@ -196,9 +209,10 @@ export function MinimalHome() {
             <text fg={theme.text.muted} marginTop={1}>opencode-vim · Powered by opencode</text>
           </Show>
         </box>
-        <MinimalHomePromptFooter bind={bind} placeholders={placeholder} />
-        <Toast />
+        <MinimalHomePromptFooter bind={bind} menu={leaderMenu()} placeholders={placeholder} />
       </box>
     </AutocompleteHostProvider>
   )
 }
+
+export const Home = MinimalHome

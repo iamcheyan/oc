@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "
 import path from "node:path"
 import os from "node:os"
 import { createSignal } from "solid-js"
-import { parseJsonc } from "@/util/jsonc"
+import { parseJsonc } from "../util/jsonc"
 
 export type QuickModelSlots = Record<string, string> // "1" -> "providerID/modelID"
 

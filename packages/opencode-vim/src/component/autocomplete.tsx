@@ -5,23 +5,22 @@ import path from "path"
 import { firstBy } from "remeda"
 import { createMemo, createResource, createEffect, onMount, onCleanup, Index, Show, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
-import { useEditorContext } from "@tui/context/editor"
-import { useClient } from "@tui/context/client"
-import { useData } from "@tui/context/data"
-import { useTuiPaths } from "@tui/context/runtime"
-import { getScrollAcceleration } from "@tui/util/scroll"
-import { useConfig } from "@tui/config"
-import { useForkTheme, selectedForeground } from "@/util/theme"
+import { useEditorContext } from "../../../tui/src/context/editor"
+import { useClient } from "../../../tui/src/context/client"
+import { useData } from "../../../tui/src/context/data"
+import { useTuiPaths } from "../../../tui/src/context/runtime"
+import { getScrollAcceleration } from "../../../tui/src/util/scroll"
+import { useConfig } from "../../../tui/src/config/index"
+import { useForkTheme, selectedForeground } from "../util/theme"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { Locale } from "@/util/locale"
-import type { PromptInfo, PromptPartRef } from "@tui/prompt/history"
-import { useFrecency } from "@tui/prompt/frecency"
-import { Keymap } from "@tui/context/keymap"
-import { useBindings } from "@opentui/keymap/solid"
-import { mentionTriggerIndex } from "@tui/prompt/display"
-import { useVimMode } from "@/feature/vim-mode"
-import { stringWidth } from "@tui/util/string-width"
-import { parseFileLineRange, stripFileLineRange } from "@tui/prompt/parse"
+import { Locale } from "../util/locale"
+import type { PromptInfo, PromptPartRef } from "../../../tui/src/prompt/history"
+import { useFrecency } from "../../../tui/src/prompt/frecency"
+import { Keymap } from "../../../tui/src/context/keymap"
+import { mentionTriggerIndex } from "../../../tui/src/prompt/display"
+import { useVimMode } from "../feature/vim-mode"
+import { stringWidth } from "../../../tui/src/util/string-width"
+import { parseFileLineRange } from "../../../tui/src/prompt/parse"
 import type { FileSystemEntry } from "@opencode/client"
 import type { KeymapCommand } from "@opencode/plugin/tui/context"
 import { Skill } from "@opencode/schema"
@@ -40,18 +39,6 @@ function displayCharAt(value: string, offset: number, widthMethod: WidthMethod) 
 function removeLineRange(input: string) {
   const hashIndex = input.lastIndexOf("#")
   return hashIndex !== -1 ? input.substring(0, hashIndex) : input
-}
-
-function extractLineRange(input: string) {
-  const hashIndex = input.lastIndexOf("#")
-  if (hashIndex === -1) return { baseQuery: input }
-  const baseName = input.substring(0, hashIndex)
-  const linePart = input.substring(hashIndex + 1)
-  const lineMatch = linePart.match(/^(\d+)(?:-(\d*))?$/)
-  if (!lineMatch) return { baseQuery: baseName }
-  const startLine = Number(lineMatch[1])
-  const endLine = lineMatch[2] && startLine < Number(lineMatch[2]) ? Number(lineMatch[2]) : undefined
-  return { lineRange: { baseName, startLine, endLine }, baseQuery: baseName }
 }
 
 export type AutocompleteRef = {
@@ -108,8 +95,6 @@ export function Autocomplete(props: {
     input: "keyboard" as "keyboard" | "mouse",
   })
   const [positionTick, setPositionTick] = createSignal(0)
-  const [dismissedValue, setDismissedValue] = createSignal<string>()
-  const [confirming, setConfirming] = createSignal<string>()
 
   createEffect(() => {
     if (!store.visible) return
@@ -132,12 +117,14 @@ export function Autocomplete(props: {
     }
   })
 
+  let container: BoxRenderable | undefined
+
   const position = createMemo(() => {
     if (!store.visible) return { x: 0, y: 0, width: 0 }
     dimensions()
     positionTick()
     const anchor = props.anchor()
-    const parent = anchor.parent
+    const parent = container?.parent
     const parentX = parent?.x ?? 0
     const parentY = parent?.y ?? 0
 
@@ -574,20 +561,24 @@ export function Autocomplete(props: {
     setStore("selected", 0)
   }
 
-  useBindings(() => ({
+  Keymap.createLayer(() => ({
+    mode: "autocomplete",
     target: props.input,
     enabled: () => Boolean(store.visible),
     commands: [
-      { name: "prompt.autocomplete.prev", title: "Previous autocomplete item", category: "Autocomplete", run() { setStore("input", "keyboard"); move(-1) } },
-      { name: "prompt.autocomplete.next", title: "Next autocomplete item", category: "Autocomplete", run() { setStore("input", "keyboard"); move(1) } },
-      { name: "prompt.autocomplete.hide", title: "Hide autocomplete", category: "Autocomplete", run() { hide(); vimMode.enterNormal() } },
-      { name: "prompt.autocomplete.select", title: "Select autocomplete item", category: "Autocomplete", run() { select() } },
-      { name: "prompt.autocomplete.complete", title: "Complete autocomplete item", category: "Autocomplete", run() { if (options()[store.selected]?.isDirectory) expandDirectory(); else select() } },
+      { id: "prompt.autocomplete.prev", title: "Previous autocomplete item", group: "Autocomplete", run() { setStore("input", "keyboard"); move(-1) } },
+      { id: "prompt.autocomplete.next", title: "Next autocomplete item", group: "Autocomplete", run() { setStore("input", "keyboard"); move(1) } },
+      { id: "prompt.autocomplete.hide", title: "Hide autocomplete", group: "Autocomplete", run() { hide(); vimMode.enterNormal() } },
+      { id: "prompt.clear", title: "Dismiss autocomplete", group: "Autocomplete", run() { hide() } },
+      { id: "prompt.autocomplete.select", title: "Select autocomplete item", group: "Autocomplete", run() { select() } },
+      { id: "prompt.autocomplete.complete", title: "Complete autocomplete item", group: "Autocomplete", run() { if (options()[store.selected]?.isDirectory) expandDirectory(); else select() } },
     ],
-    bindings: config.keybinds.gather("prompt.autocomplete", ["prompt.autocomplete.prev", "prompt.autocomplete.next", "prompt.autocomplete.hide", "prompt.autocomplete.select", "prompt.autocomplete.complete"]),
   }))
 
-  function show(mode: "@" | "/") { setStore({ visible: mode, index: props.input().cursorOffset }) }
+  function show(mode: "@" | "/") {
+    setStore({ visible: mode, index: props.input().cursorOffset })
+    setPositionTick((t) => t + 1)
+  }
 
   function hide() {
     const text = props.input().plainText
@@ -625,7 +616,7 @@ export function Autocomplete(props: {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
   const menuWidth = createMemo(() => Math.max(24, Math.min(position().width, Math.max(24, dimensions().width - 2))))
   return (
-    <box visible={store.visible !== false} position="absolute" top={Math.max(0, position().y - height())} left={Math.max(0, Math.min(position().x, dimensions().width - menuWidth()))} width={menuWidth()} zIndex={100}>
+    <box ref={(renderable: BoxRenderable) => (container = renderable)} visible={store.visible !== false} position="absolute" top={Math.max(0, position().y - height())} left={Math.max(0, Math.min(position().x, dimensions().width - menuWidth()))} width={menuWidth()} zIndex={100}>
       <scrollbox ref={(renderable: ScrollBoxRenderable) => (scroll = renderable)} backgroundColor={theme.background.raised.base} height={height()} scrollX={false} verticalScrollbarOptions={{ visible: true }} horizontalScrollbarOptions={{ visible: false }} scrollAcceleration={scrollAcceleration()}>
         <Index each={options()} fallback={<box paddingLeft={1} paddingRight={1}><text fg={theme.text.muted}>No matching items</text></box>}>
           {(option, index) => (

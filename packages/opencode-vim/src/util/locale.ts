@@ -1,1 +1,1 @@
-export * from "@tui/util/locale"
+export * from "../../../tui/src/util/locale"

@@ -1,12 +1,12 @@
 import { createMemo } from "solid-js"
-import { useLocation } from "@tui/context/location"
+import { useLocation } from "../../../tui/src/context/location"
 import {
   loadLeaderMenuConfig,
   binaryExists,
   type LeaderGroupConfig,
   type LeaderItemConfig,
   type LeaderAction,
-} from "@/config/leader-menu"
+} from "../config/leader-menu"
 
 export type { LeaderGroupConfig, LeaderItemConfig, LeaderAction }
 
@@ -34,10 +34,6 @@ export type LeaderItem = LeaderLeaf | LeaderSeparator | LeaderGroup
 
 export function isSeparator(item: LeaderItem): item is LeaderSeparator {
   return "separator" in item && item.separator === true
-}
-
-function isLeaderGroupEntry(entry: LeaderGroupConfig): entry is LeaderGroupConfig {
-  return "items" in entry
 }
 
 function convertToLeaderGroup(config: LeaderGroupConfig): LeaderGroup {

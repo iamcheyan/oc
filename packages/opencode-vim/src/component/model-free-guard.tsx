@@ -1,8 +1,8 @@
 import { createEffect } from "solid-js"
-import { useLocal } from "@tui/context/local"
-import { useData } from "@tui/context/data"
-import { useLocation } from "@tui/context/location"
-import { findFreeModel, isForcedFreeOnly, isModelFree } from "@/config/model-filter"
+import { useLocal } from "../../../tui/src/context/local"
+import { useData } from "../../../tui/src/context/data"
+import { useLocation } from "../../../tui/src/context/location"
+import { findFreeModel, isForcedFreeOnly, isModelFree } from "../config/model-filter"
 
 export function ModelFreeGuard() {
   const local = useLocal()
