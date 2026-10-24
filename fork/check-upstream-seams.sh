@@ -41,7 +41,7 @@ is_seam() {
 
 is_fork_owned() {
   case "$1" in
-    fork/* | packages/opencode-vim/* | site/* | .oc/* | .opencode/* | .husky/*)
+    fork/* | packages/opencode-vim/* | site/* | .husky/*)
       return 0
       ;;
     packages/web/* | packages/ui/*)

@@ -5,7 +5,3 @@ bun.lock
 .gitignore
 package-lock.json
 references/
-repl.json
-skills/*
-!skills/effect/
-tool.disabled/
