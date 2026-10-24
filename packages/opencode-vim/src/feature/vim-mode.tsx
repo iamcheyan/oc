@@ -6,10 +6,6 @@ import { loadVimConfig } from "../config/vim"
 import { useRenderer } from "@opentui/solid"
 import { type ScrollBoxRenderable } from "@opentui/core"
 import type { MinimalPromptRef } from "../component/prompt"
-import { existsSync, statSync } from "node:fs"
-import { spawnSync } from "node:child_process"
-import os from "node:os"
-import path from "node:path"
 import {
   type LeaderGroup,
   type LeaderLeaf,
@@ -21,13 +17,8 @@ import {
 import { DialogForkModel } from "../component/dialog-model"
 import type { DialogContext } from "../../../tui/src/ui/dialog"
 
-
 export type { LeaderGroup, LeaderLeaf, LeaderSeparator, LeaderAction }
 export { isSeparator, getLeaderMenu }
-
-declare global {
-  var __SKILL_FILTER__: string | undefined
-}
 
 const [isNormal, setIsNormal] = createSignal(false)
 const [isLeaderActive, setIsLeaderActive] = createSignal(false)
@@ -51,70 +42,6 @@ export function useVimMode() {
     leaderSelectedIndex,
     setLeaderSelectedIndex,
   }
-}
-
-function errorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message
-  return String(e)
-}
-
-function resolveDir(dir: string): string {
-  const idx = dir.lastIndexOf(":")
-  let resolved = idx > 0 ? dir.substring(0, idx) : dir
-  if (resolved.startsWith("~")) {
-    resolved = resolved.replace("~", os.homedir())
-  }
-  return resolved
-}
-
-function findLazyGitPath() {
-  // 1. Try to check standard paths directly
-  const commonPaths = [
-    "/opt/homebrew/bin/lazygit",
-    "/usr/local/bin/lazygit",
-    "/usr/bin/lazygit",
-    "/bin/lazygit"
-  ]
-  for (const p of commonPaths) {
-    if (existsSync(p)) return p
-  }
-
-  // 2. Try to run "which lazygit" in path environment
-  try {
-    const whichRes = spawnSync("which", ["lazygit"], { encoding: "utf8" })
-    if (whichRes.status === 0 && whichRes.stdout.trim()) {
-      return whichRes.stdout.trim()
-    }
-  } catch {}
-
-  // 3. Try to check if we can run it in a zsh login shell to find it
-  try {
-    const shellRes = spawnSync("zsh", ["-lic", "which lazygit"], { encoding: "utf8" })
-    if (shellRes.status === 0 && shellRes.stdout.trim()) {
-      return shellRes.stdout.trim()
-    }
-  } catch {}
-
-  // 4. Default back to just "lazygit"
-  return "lazygit"
-}
-
-function resolveSafeCwd(targetPath: string | undefined): string {
-  if (!targetPath) return process.cwd()
-  let resolved = targetPath.trim()
-  if (!resolved) return process.cwd()
-  if (resolved.startsWith("~")) {
-    resolved = resolved.replace("~", os.homedir())
-  }
-  try {
-    if (existsSync(resolved)) {
-      const stat = statSync(resolved)
-      if (stat.isDirectory()) {
-        return resolved
-      }
-    }
-  } catch {}
-  return process.cwd()
 }
 
 export function useVimSession(
@@ -198,156 +125,20 @@ export function useVimSession(
     setLeaderSelectedIndex(0)
   }
 
-  const runLazyGit = () => {
-    try {
-      renderer.suspend()
-      renderer.currentRenderBuffer.clear()
-      const lazygitPath = findLazyGitPath()
-      const safeCwd = resolveSafeCwd(directory())
-      const result = spawnSync(lazygitPath, [], {
-        stdio: "inherit",
-        cwd: safeCwd,
-      })
-      if (result.error) {
-        throw result.error
-      }
-    } catch (e) {
-      console.error("lazygit error:", errorMessage(e))
-    } finally {
-      renderer.currentRenderBuffer.clear()
-      renderer.resume()
-      renderer.requestRender()
-    }
-  }
-
-  const runLazyVim = (rendererInstance: ReturnType<typeof useRenderer>, cwd: string) => {
-    // Find available editor: nvim > vim > vi
-    const editors = ["nvim", "vim", "vi"]
-    let editor: string | null = null
-    
-    for (const ed of editors) {
-      try {
-        const result = spawnSync("which", [ed], { encoding: "utf-8" })
-        if (result.status === 0) {
-          editor = ed
-          break
-        }
-      } catch {
-        // continue to next editor
-      }
-    }
-    
-    if (!editor) {
-      console.error("No editor found (tried: nvim, vim, vi)")
-      return
-    }
-    
-    try {
-      rendererInstance.suspend()
-      rendererInstance.currentRenderBuffer.clear()
-      const result = spawnSync(editor, [], {
-        stdio: "inherit",
-        cwd: cwd,
-      })
-      if (result.error) {
-        throw result.error
-      }
-    } catch (e) {
-      // Silently ignore errors (e.g., user quit editor)
-      console.error("LazyVim error:", errorMessage(e))
-    } finally {
-      rendererInstance.currentRenderBuffer.clear()
-      rendererInstance.resume()
-      rendererInstance.requestRender()
-    }
-  }
-
-  const runTuiTool = (cmd: string, args: string[] = []) => {
-    try {
-      renderer.suspend()
-      renderer.currentRenderBuffer.clear()
-      const safeCwd = resolveSafeCwd(directory())
-      const result = spawnSync(cmd, args, {
-        stdio: "inherit",
-        cwd: safeCwd,
-      })
-      if (result.error) {
-        throw result.error
-      }
-    } catch (e) {
-      console.error(`${cmd}: ${errorMessage(e)}`)
-    } finally {
-      renderer.currentRenderBuffer.clear()
-      renderer.resume()
-      renderer.requestRender()
-    }
-  }
-
   const runLeaderLeaf = (entry: LeaderLeaf) => {
     closeLeaderMenu()
     queueMicrotask(() => {
-      if (entry.action === "tui" && entry.command) {
-        runTuiTool(entry.command, entry.args)
-        return
-      }
-      if (entry.action === "shell" && entry.command) {
-        runTuiTool(entry.command, entry.args)
-        return
-      }
       if (entry.action === "quit") {
         renderer.destroy()
         process.stdout.write("\x1b[2J\x1b[H")
         process.exit(0)
         return
       }
-      if (entry.action === "clear") {
-        renderer.currentRenderBuffer?.clear()
-        return
-      }
-      if (entry.action === "command" && entry.command === "model.list") {
+      if (entry.command === "model.list") {
         dialog.replace(() => <DialogForkModel />)
         return
       }
-      if (entry.action === "lazygit") {
-        closeLeaderMenu()
-        queueMicrotask(() => {
-          runLazyGit()
-        })
-        return
-      }
-      if (entry.action === "lazyvim") {
-        closeLeaderMenu()
-        queueMicrotask(() => {
-          runLazyVim(renderer, resolveDir(directory()))
-        })
-        return
-      }
-      if (entry.action === "skill" && entry.skill) {
-        closeLeaderMenu()
-        queueMicrotask(() => {
-          // Install skills if needed
-          const skillsDir = path.join(os.homedir(), ".opencode", "skills")
-          const skillPath = path.join(skillsDir, entry.skill!, "SKILL.md")
-          if (!existsSync(skillPath)) {
-            // Skills not installed, run install script first
-            const installScript = path.join(resolveDir(directory()), "packages", "opencode-vim", "skills", "install.sh")
-            if (existsSync(installScript)) {
-              spawnSync("/bin/bash", [installScript], { stdio: "inherit" })
-            }
-          }
-          // Store filter for skill dialog
-          globalThis.__SKILL_FILTER__ = entry.skill
-          // Trigger the skill command
-          keymap.dispatch("prompt.skills")
-        })
-        return
-      }
-      if (entry.action === "command" && entry.command) {
-        keymap.dispatch(entry.command)
-        return
-      }
-      // Legacy: no action specified, treat as command
-      if (!entry.action && entry.command) {
+      if (entry.command) {
         keymap.dispatch(entry.command)
       }
     })
@@ -690,119 +481,20 @@ export function useVimHome(
     setLeaderSelectedIndex(0)
   }
 
-  const runLazyGit = () => {
-    try {
-      renderer.suspend()
-      renderer.currentRenderBuffer.clear()
-      const lazygitPath = findLazyGitPath()
-      const safeCwd = resolveSafeCwd(directory())
-      const result = spawnSync(lazygitPath, [], {
-        stdio: "inherit",
-        cwd: safeCwd,
-      })
-      if (result.error) {
-        throw result.error
-      }
-    } catch (e) {
-      console.error("lazygit error:", errorMessage(e))
-    } finally {
-      renderer.currentRenderBuffer.clear()
-      renderer.resume()
-      renderer.requestRender()
-    }
-  }
-
-  const runLazyVim = (rendererInstance: ReturnType<typeof useRenderer>, cwd: string) => {
-    const editors = ["nvim", "vim", "vi"]
-    let editor: string | null = null
-
-    for (const ed of editors) {
-      try {
-        const result = spawnSync("which", [ed], { encoding: "utf-8" })
-        if (result.status === 0) {
-          editor = ed
-          break
-        }
-      } catch {
-        // continue to next editor
-      }
-    }
-
-    if (!editor) {
-      console.error("No editor found (tried: nvim, vim, vi)")
-      return
-    }
-
-    try {
-      rendererInstance.suspend()
-      rendererInstance.currentRenderBuffer.clear()
-      const result = spawnSync(editor, [], {
-        stdio: "inherit",
-        cwd,
-      })
-      if (result.error) {
-        throw result.error
-      }
-    } catch (e) {
-      console.error("LazyVim error:", errorMessage(e))
-    } finally {
-      rendererInstance.currentRenderBuffer.clear()
-      rendererInstance.resume()
-      rendererInstance.requestRender()
-    }
-  }
-
-  const runTuiTool = (cmd: string, args: string[] = []) => {
-    try {
-      renderer.suspend()
-      renderer.currentRenderBuffer.clear()
-      const safeCwd = resolveSafeCwd(directory())
-      const result = spawnSync(cmd, args, {
-        stdio: "inherit",
-        cwd: safeCwd,
-      })
-      if (result.error) {
-        throw result.error
-      }
-    } catch (e) {
-      console.error(`${cmd}: ${errorMessage(e)}`)
-    } finally {
-      renderer.currentRenderBuffer.clear()
-      renderer.resume()
-      renderer.requestRender()
-    }
-  }
-
   const runLeaderLeaf = (entry: LeaderLeaf) => {
     closeLeaderMenu()
     queueMicrotask(() => {
-      if ((entry.action === "tui" || entry.action === "shell") && entry.command) {
-        runTuiTool(entry.command, entry.args)
-        return
-      }
       if (entry.action === "quit") {
         renderer.destroy()
         process.stdout.write("\x1b[2J\x1b[H")
         process.exit(0)
         return
       }
-      if (entry.action === "clear") {
-        renderer.currentRenderBuffer?.clear()
-        return
-      }
-      if ((entry.action === "command" || !entry.action) && entry.command === "model.list") {
+      if (entry.command === "model.list") {
         dialog.replace(() => <DialogForkModel />)
         return
       }
-      if (entry.action === "lazygit") {
-        runLazyGit()
-        return
-      }
-      if (entry.action === "lazyvim") {
-        runLazyVim(renderer, resolveDir(directory()))
-        return
-      }
-      if ((entry.action === "command" || !entry.action) && entry.command) {
+      if (entry.command) {
         keymap.dispatch(entry.command)
       }
     })
