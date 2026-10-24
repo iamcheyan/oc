@@ -98,8 +98,20 @@ smoke_test_binary() {
   fi
 }
 
+cleanup() {
+  # Cleanup temporary build markers or stubs on exit
+  :
+}
+
+trap cleanup EXIT
+
 # ─── Main build ───────────────────────────────────────────────────────────────
 main() {
+  if [[ "${1:-}" == "--clean" ]]; then
+    echo -e "${DIM}Cleaning build and dist directories...${RESET}"
+    rm -rf "$SCRIPT_DIR/dist" "$CLI_DIR/dist"
+  fi
+
   echo -e "${BOLD}${CYAN}Building opencode + opencode-vim binaries${RESET}"
   echo ""
 

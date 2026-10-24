@@ -73,8 +73,31 @@ else:
   fi
 }
 
+# 自动清理历史备份分支（保留最近 5 个）
+cleanup_old_backups() {
+  local keep_count=5
+  local branches
+  branches=$(git branch --list 'backup/main-before-upstream-*' 'backup/nightly-sync-*' 'fork-sync-*' | sed 's/^[ *]*//' | sort -r)
+  local count=0
+  while IFS= read -r b; do
+    [ -n "$b" ] || continue
+    count=$((count + 1))
+    if [ "$count" -gt "$keep_count" ]; then
+      git branch -D "$b" >/dev/null 2>&1 || true
+    fi
+  done <<< "$branches"
+}
+
+# 确保工作区干净
+if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+  echo "Error: Worktree is not clean. Commit or stash your changes before syncing." >&2
+  exit 1
+fi
+
 echo "=== Fetching upstream ==="
 git fetch upstream
+
+cleanup_old_backups
 
 echo ""
 echo "=== Current state ==="
