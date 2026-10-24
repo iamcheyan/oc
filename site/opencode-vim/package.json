@@ -1,0 +1,15 @@
+{
+  "name": "opencode-vim",
+  "version": "1.0.0",
+  "description": "Vim-mode, leader menu, status bar and oceanblack theme for opencode, as a pure TUI plugin (no upstream changes).",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["opencode", "vim", "tui", "plugin"],
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.17.20",
+    "@opentui/core": "^0.4.3",
+    "@opentui/solid": "^0.4.3",
+    "@opentui/keymap": "^0.4.3",
+    "solid-js": "^1.9.10"
+  }
+}
